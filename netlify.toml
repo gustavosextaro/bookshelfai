@@ -1,0 +1,18 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "supabase/functions"
+
+[dev]
+  framework = "#auto"
+  targetPort = 9000
+  port = 8888
+
+[[redirects]]
+  from = "/.netlify/functions/*"
+  to = "/supabase/functions/:splat"
+  status = 200
+
+[functions]
+  directory = "supabase/functions"
+  node_bundler = "esbuild"

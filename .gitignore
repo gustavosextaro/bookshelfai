@@ -1,0 +1,15 @@
+node_modules
+.DS_Store
+
+# Vite / local secrets
+.env
+.env.*
+
+# Supabase local
+.supabase
+
+# Build
+/dist
+
+# Local Netlify folder
+.netlify

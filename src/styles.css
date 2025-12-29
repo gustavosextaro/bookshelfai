@@ -1,0 +1,410 @@
+:root {
+  color-scheme: light;
+  
+  /* Claude-style Tailwind 4 tokens */
+  --bg-0: #FAF9F5;
+  --bg-000: #FAF9F5;
+  --bg-100: #FFFFFF;
+  --bg-200: #F0EEE6;
+  --bg-300: #DDDDDD;
+  --text-100: #1F1E1D;
+  --text-200: #3D3D3A;
+  --text-300: #73726C;
+  --text-400: #888888;
+  --text-500: #999999;
+  --accent: #D97757;
+  --accent-hover: #C6613F;
+  
+  /* Original BookshelfAI tokens */
+  --bg: #0b0f19;
+  --panel: rgba(255, 255, 255, 0.06);
+  --panel-2: rgba(255, 255, 255, 0.08);
+  --text: rgba(255, 255, 255, 0.92);
+  --muted: rgba(255, 255, 255, 0.62);
+  --border: rgba(255, 255, 255, 0.10);
+  --brand: #7c5cff;
+  --brand-2: #3dd9eb;
+  --danger: #ff5c7a;
+  --shadow: 0 16px 50px rgba(0, 0, 0, 0.55);
+  --radius: 16px;
+  --book-w: 110px;
+  --book-h: 160px;
+}
+
+.dark {
+  --bg-0: #212121;
+  --bg-000: #212121;
+  --bg-100: #262624;
+  --bg-200: #30302E;
+  --bg-300: #454540;
+  --text-100: #ECECEC;
+  --text-200: #E1E1E0;
+  --text-300: #B4B4B4;
+  --text-400: #8A8A88;
+  --text-500: #6B6B65;
+  --accent: #D2996E;
+  --accent-hover: #E5AA7F;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out;
+}
+
+.animate-pulse {
+  animation: pulse 3s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  background:
+    radial-gradient(1200px 800px at 20% 10%, rgba(124, 92, 255, 0.35), transparent 55%),
+    radial-gradient(900px 700px at 85% 15%, rgba(61, 217, 235, 0.25), transparent 50%),
+    radial-gradient(900px 700px at 60% 90%, rgba(255, 92, 122, 0.18), transparent 45%),
+    var(--bg);
+  color: var(--text);
+}
+
+a { color: inherit; text-decoration: none; }
+
+.container {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  padding: 22px;
+  border-right: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+  backdrop-filter: blur(14px);
+}
+
+.main {
+  padding: 22px;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.h1 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.muted { color: var(--muted); }
+
+.row { display: flex; gap: 12px; align-items: center; }
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease;
+}
+
+.btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.btn:active { transform: translateY(1px); }
+
+.btnPrimary {
+  border: 1px solid rgba(124, 92, 255, 0.55);
+  background: linear-gradient(135deg, rgba(124, 92, 255, 0.95), rgba(61, 217, 235, 0.65));
+}
+
+.input, .select {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 12px;
+  outline: none;
+}
+
+option {
+  background: #0b0f19; /* Use explicit dark color matching --bg */
+  color: #fff;
+}
+
+.input:focus, .select:focus {
+  border-color: rgba(124, 92, 255, 0.7);
+  box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.18);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+.bookCard {
+  padding: 12px;
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease;
+}
+
+.bookCard:hover { transform: translateY(-2px); background: var(--panel-2); }
+
+.coverWrap {
+  width: var(--book-w);
+  height: var(--book-h);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  flex: 0 0 auto;
+}
+
+.cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.coverFallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  color: rgba(255,255,255,0.7);
+  font-size: 12px;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(124,92,255,0.35), rgba(255,255,255,0.04));
+}
+
+.bookMeta {
+  margin-top: 10px;
+}
+
+.bookTitle {
+  font-weight: 650;
+  font-size: 13px;
+  line-height: 1.25;
+  margin: 0 0 6px 0;
+}
+
+.kv {
+  font-size: 12px;
+  color: var(--muted);
+  display: grid;
+  gap: 2px;
+}
+
+.progressWrap {
+  margin-top: 14px;
+  padding: 14px;
+}
+
+.progressBar {
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(135deg, rgba(124,92,255,0.95), rgba(61,217,235,0.75));
+  width: 0%;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(6px);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  z-index: 50;
+}
+
+.modal {
+  width: min(900px, 100%);
+  max-height: 85vh;
+  overflow: auto;
+  padding: 16px;
+}
+
+.modalGrid {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 16px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.06);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 0.8fr 0.6fr;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.form {
+  display: grid;
+  grid-template-columns: 1fr 170px auto;
+  gap: 10px;
+  align-items: end;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 980px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    position: relative;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+  .form {
+    grid-template-columns: 1fr;
+  }
+  .modalGrid {
+    grid-template-columns: 1fr;
+  }
+  .coverWrap { margin: 0 auto; }
+}
+
+/* =====================================================
+   INFINITE GRID BACKGROUND STYLES
+   ===================================================== */
+
+.infinite-grid-container {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.infinite-grid-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.grid-stroke {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.infinite-grid-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.infinite-grid-layer-subtle {
+  opacity: 0.08;
+}
+
+.infinite-grid-layer-highlight {
+  opacity: 0.5;
+}
+
+.infinite-grid-blur-spheres {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.blur-sphere {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.blur-sphere-orange {
+  right: -20%;
+  top: -20%;
+  width: 40%;
+  height: 40%;
+  background: rgba(255, 92, 122, 0.25);
+  filter: blur(120px);
+}
+
+.blur-sphere-primary {
+  right: 10%;
+  top: -10%;
+  width: 20%;
+  height: 20%;
+  background: rgba(124, 92, 255, 0.3);
+  filter: blur(100px);
+}
+
+.blur-sphere-blue {
+  left: -10%;
+  bottom: -20%;
+  width: 40%;
+  height: 40%;
+  background: rgba(61, 217, 235, 0.25);
+  filter: blur(120px);
+}
+
+/* Ensure main content stays above grid */
+.container {
+  position: relative;
+  z-index: 1;
+}
