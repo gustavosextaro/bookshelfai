@@ -78,12 +78,18 @@ html, body {
   height: 100%;
   margin: 0;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  color: var(--text);
+  background: var(--bg);
+}
+
+body {
   background:
     radial-gradient(1200px 800px at 20% 10%, rgba(124, 92, 255, 0.35), transparent 55%),
     radial-gradient(900px 700px at 85% 15%, rgba(61, 217, 235, 0.25), transparent 50%),
     radial-gradient(900px 700px at 60% 90%, rgba(255, 92, 122, 0.18), transparent 45%),
     var(--bg);
-  color: var(--text);
+  background-attachment: fixed;
+  background-size: 100% 100vh;
 }
 
 a { color: inherit; text-decoration: none; }
@@ -407,4 +413,13 @@ option {
 .container {
   position: relative;
   z-index: 1;
+}
+
+/* Utility to hide scrollbar but allow scrolling */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

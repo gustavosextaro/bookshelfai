@@ -4,6 +4,8 @@ import InfiniteGridBackground from './InfiniteGridBackground'
 import AIAgentsHome from './AIAgentsHome'
 import LibraryPage from './LibraryPage'
 import ProfilePage from './ProfilePage'
+import SettingsPage from './SettingsPage'
+import { Bot, Library, Settings, User as UserIcon, LogOut, BookOpen } from 'lucide-react'
 
 function Auth({ onAuthed }) {
   const [mode, setMode] = useState('signin')
@@ -94,15 +96,63 @@ function Auth({ onAuthed }) {
   )
 }
 
+function NavItem({ active, onClick, icon, label }) {
+  return (
+    <button 
+      className={active ? 'btn btnPrimary' : 'btn'}
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        width: '100%',
+        justifyContent: 'flex-start',
+        border: active ? undefined : '1px solid transparent', // clean look for inactive
+        background: active ? undefined : 'transparent',
+        textAlign: 'left'
+      }}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  )
+}
+
 export default function App() {
   const [session, setSession] = useState(null)
-  const [currentPage, setCurrentPage] = useState('ai-agents') // 'ai-agents', 'library', 'profile'
+  const [userProfile, setUserProfile] = useState(null)
+  const [currentPage, setCurrentPage] = useState('ai-agents') // 'ai-agents', 'library', 'profile', 'settings'
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
     return () => subscription.unsubscribe()
   }, [])
+
+  // Fetch basics when session exists
+  useEffect(() => {
+    if (session?.user) {
+      loadUserProfile(session.user)
+    }
+  }, [session])
+
+  async function loadUserProfile(user, directData = null) {
+    // If direct data is provided (from ProfilePage save), use it immediately
+    if (directData) {
+      setUserProfile({ 
+        username: directData.username, 
+        email: user.email 
+      })
+      return
+    }
+
+    // Otherwise, fetch from DB
+    const { data } = await supabase.from('profiles').select('username').eq('id', user.id).single()
+    const username = data?.username || 
+                     localStorage.getItem('bookshelfai.username') || 
+                     user.email.split('@')[0]
+    setUserProfile({ username, email: user.email })
+  }
 
   async function handleSignOut() {
     await supabase.auth.signOut()
@@ -123,8 +173,8 @@ export default function App() {
       <InfiniteGridBackground />
       <div className="container">
         {/* Sidebar */}
-        <aside className="sidebar">
-          <div style={{ marginBottom: '30px' }}>
+        <aside className="sidebar" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ marginBottom: '30px', paddingLeft: '8px' }}>
             <div style={{ 
               fontSize: '20px', 
               fontWeight: '700',
@@ -139,43 +189,102 @@ export default function App() {
           </div>
 
           {/* Navigation */}
-          <div style={{ display: 'grid', gap: '8px', marginBottom: '20px' }}>
-            <button 
-              className={currentPage === 'ai-agents' ? 'btn btnPrimary' : 'btn'}
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+            <NavItem 
+              active={currentPage === 'ai-agents'} 
               onClick={() => setCurrentPage('ai-agents')}
-            >
-              🧠 Agentes de IA
-            </button>
-            <button 
-              className={currentPage === 'library' ? 'btn btnPrimary' : 'btn'}
+              icon={<Bot size={20} />}
+              label="Agentes de IA"
+            />
+            <NavItem 
+              active={currentPage === 'library'} 
               onClick={() => setCurrentPage('library')}
-            >
-              📚 Biblioteca
-            </button>
+              icon={<Library size={20} />} // Changed from Book to Library
+              label="Biblioteca"
+            />
+            <NavItem 
+              active={currentPage === 'settings'} 
+              onClick={() => setCurrentPage('settings')}
+              icon={<Settings size={20} />}
+              label="Configurações"
+            />
+          </nav>
+
+          {/* User Profile Widget (Bottom) */}
+          <div style={{ 
+            borderTop: '1px solid var(--border)', 
+            paddingTop: '16px', 
+            marginTop: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px'
+          }}>
             <button 
               className={currentPage === 'profile' ? 'btn btnPrimary' : 'btn'}
               onClick={() => setCurrentPage('profile')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                width: '100%',
+                padding: '10px 12px',
+                background: currentPage === 'profile' ? undefined : 'rgba(255,255,255,0.03)',
+                border: currentPage === 'profile' ? undefined : '1px solid var(--border)',
+                borderRadius: '12px',
+                textAlign: 'left'
+              }}
             >
-              👤 Perfil
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '14px',
+                fontWeight: '700',
+                flexShrink: 0
+              }}>
+                {userProfile?.username?.[0]?.toUpperCase() || 'U'}
+              </div>
+              <div style={{ overflow: 'hidden', flex: 1 }}>
+                <div style={{ fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {userProfile?.username || 'Usuário'}
+                </div>
+                <div className="muted" style={{ fontSize: '11px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {userProfile?.email}
+                </div>
+              </div>
             </button>
-          </div>
 
-          <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
-            <button className="btn" onClick={handleSignOut} style={{ width: '100%' }}>
-              ← Sair
+            <button 
+              onClick={handleSignOut}
+              className="btn"
+              style={{ 
+                width: '100%', 
+                fontSize: '12px', 
+                color: 'var(--muted)', 
+                background: 'transparent', 
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}
+            >
+              <LogOut size={14} /> Sair
             </button>
-          </div>
-
-          <div className="muted" style={{ fontSize: '11px', marginTop: '20px', lineHeight: '1.5' }}>
-            Transforme seus livros em conteúdo viral com IA inteligente
           </div>
         </aside>
 
         {/* Main Content */}
-        <main className="main">
-          {currentPage === 'ai-agents' && <AIAgentsHome />}
-          {currentPage === 'library' && <LibraryPage />}
-          {currentPage === 'profile' && <ProfilePage />}
+        <main className="main-content">
+          {currentPage === 'ai-agents' && <AIAgentsHome user={session?.user} />}
+          {currentPage === 'library' && <LibraryPage user={session?.user} />}
+          {currentPage === 'settings' && <SettingsPage />}
+          {currentPage === 'profile' && <ProfilePage onProfileUpdate={(data) => session?.user && loadUserProfile(session.user, data)} />}
         </main>
       </div>
     </>
