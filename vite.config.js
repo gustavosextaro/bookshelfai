@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 9000,
-    host: true,
+    host: '0.0.0.0',
     proxy: {
       '/.netlify/functions': {
         target: 'http://localhost:3002',

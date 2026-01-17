@@ -94,12 +94,14 @@ const InfiniteGridBackground = () => {
         <GridPattern offsetX={gridOffsetX} offsetY={gridOffsetY} size={gridSize} />
       </motion.div>
 
-      {/* Decorative Blur Spheres */}
+      {/* Decorative Blur Spheres - REMOVED for Premium SaaS look */}
+      {/* 
       <div className="infinite-grid-blur-spheres">
         <div className="blur-sphere blur-sphere-orange" />
         <div className="blur-sphere blur-sphere-primary" />
         <div className="blur-sphere blur-sphere-blue" />
-      </div>
+      </div> 
+      */}
     </div>
   );
 };

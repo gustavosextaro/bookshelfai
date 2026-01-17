@@ -3,6 +3,8 @@ import { supabase } from './supabaseClient'
 import { runAiAction, saveAiSettings, getAiSettings } from './aiClient'
 import { getUserProfile, updateUserProfile, getUserStats } from './profileClient'
 import InfiniteGridBackground from './InfiniteGridBackground'
+import { Brain, Lightbulb, Library, CheckCircle2, User, BarChart3, Edit, CreditCard } from 'lucide-react'
+import PricingPage from './PricingPage'
 
 // Constants
 const GOAL_DEFAULT = 12
@@ -268,7 +270,7 @@ function AiSettings({ onSaved }) {
               alignItems: 'center',
               gap: 6
             }}>
-              <span>✅ Chave salva:</span>
+              <CheckCircle2 size={16} style={{ display: 'inline', marginRight: 4 }} /> <span>Chave salva:</span>
               <span style={{ fontFamily: 'monospace' }}>{savedKey}</span>
             </div>
           )}
@@ -321,7 +323,7 @@ function AiPanel({ totalBooks, onClose }) {
   return (
     <div className="card" style={{ padding: 14 }}>
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 10 }}>
-        <div style={{ fontWeight: 800 }}>🧠 Amplificador Intelectual</div>
+        <div style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6 }}><Brain size={18} /> Amplificador Intelectual</div>
         {onClose && <button className="btn" onClick={onClose}>Fechar</button>}
       </div>
 
@@ -335,7 +337,7 @@ function AiPanel({ totalBooks, onClose }) {
         lineHeight: 1.5,
         color: '#c4b5fd'
       }}>
-        <div style={{ fontWeight: 600, marginBottom: 4, color: '#a78bfa' }}>💡 Análise de Repertório Completo</div>
+        <div style={{ fontWeight: 600, marginBottom: 4, color: '#a78bfa', display: 'flex', alignItems: 'center', gap: 6 }}><Lightbulb size={16} /> Análise de Repertório Completo</div>
         A IA vai analisar <strong>TODOS os {totalBooks} livros</strong> da sua biblioteca para:
         <ul style={{ margin: '6px 0 0 0', paddingLeft: 20 }}>
           <li>Identificar padrões e teses dominantes</li>
@@ -374,7 +376,7 @@ function AiPanel({ totalBooks, onClose }) {
                   fontSize: 11,
                   color: '#4ade80'
                 }}>
-                  📚 Analisados: {metadata.booksAnalyzed} livros | Mais antigo: {metadata.oldestBook} | Mais recente: {metadata.newestBook}
+                  <Library size={14} style={{ display: 'inline', marginRight: 4 }} /> Analisados: {metadata.booksAnalyzed} livros | Mais antigo: {metadata.oldestBook} | Mais recente: {metadata.newestBook}
                 </div>
               )}
               <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{result.output}</div>
@@ -433,7 +435,7 @@ function ProfileTab() {
 
   return (
     <div style={{ padding: 20, maxWidth: 900, margin: '0 auto' }}>
-      <div className="h1" style={{ marginBottom: 20 }}>👤 Meu Perfil</div>
+      <div className="h1" style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}><User size={28} /> Meu Perfil</div>
 
       {editing ? (
         <ProfileEditor 
@@ -472,7 +474,7 @@ function ProfileTab() {
                 <div className="muted" style={{ fontSize: 13 }}>Membro desde {new Date(profile?.created_at).toLocaleDateString('pt-BR')}</div>
               </div>
             </div>
-            <button className="btn" onClick={() => setEditing(true)}>✏️ Editar</button>
+            <button className="btn" onClick={() => setEditing(true)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Edit size={16} /> Editar</button>
           </div>
         </div>
       )}
@@ -533,7 +535,7 @@ function DashboardStats({ stats }) {
 
   return (
     <div style={{ marginBottom: 20 }}>
-      <div style={{ fontWeight: 700, marginBottom: 12, fontSize: 16 }}>📊 Estatísticas</div>
+      <div style={{ fontWeight: 700, marginBottom: 12, fontSize: 16, display: 'flex', alignItems: 'center', gap: 6 }}><BarChart3 size={16} /> Estatísticas</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
         <div className="card" style={{ padding: 16, textAlign: 'center' }}>
           <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>Livros Lidos</div>
@@ -557,7 +559,7 @@ function BookUsageList({ bookUsage }) {
 
   return (
     <div>
-      <div style={{ fontWeight: 700, marginBottom: 12, fontSize: 16 }}>📚 Uso por Livro</div>
+      <div style={{ fontWeight: 700, marginBottom: 12, fontSize: 16, display: 'flex', alignItems: 'center', gap: 6 }}><Library size={16} /> Uso por Livro</div>
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {bookUsage.map((book, idx) => (
           <div 
@@ -759,7 +761,8 @@ export default function App() {
 
         <div className="card" style={{ padding: 10, display: 'grid', gap: 8 }}>
           <button className="btn" onClick={() => { setPage('library'); setSelectedBook(null); setShowAiPanel(false) }}>Minha Biblioteca</button>
-          <button className="btn" onClick={() => setPage('profile')}>👤 Perfil</button>
+          <button className="btn" onClick={() => setPage('planos')} style={{ display: 'flex', alignItems: 'center', gap: 6 }}><CreditCard size={16} /> Planos</button>
+          <button className="btn" onClick={() => setPage('profile')} style={{ display: 'flex', alignItems: 'center', gap: 6 }}><User size={16} /> Perfil</button>
           <button className="btn" onClick={handleSignOut}>Sair</button>
         </div>
 
@@ -804,6 +807,8 @@ export default function App() {
           <ProfileTab />
         ) : page === 'ai_settings' ? (
           <AiSettings />
+        ) : page === 'planos' ? (
+          <PricingPage />
         ) : (
           <>
             <form className="card form" onSubmit={handleAddBook}>
@@ -923,8 +928,8 @@ export default function App() {
 
                       <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
                         <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
-                          <span className="badge">✍️ {selectedBook.authors?.length ? selectedBook.authors.join(', ') : 'N/A'}</span>
-                          <span className="badge">📚 {selectedBook.categories?.length ? selectedBook.categories.join(', ') : 'N/A'}</span>
+                          <span className="badge" style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Edit size={14} /> {selectedBook.authors?.length ? selectedBook.authors.join(', ') : 'N/A'}</span>
+                          <span className="badge" style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Library size={14} /> {selectedBook.categories?.length ? selectedBook.categories.join(', ') : 'N/A'}</span>
                           {selectedBook.google_books_id && (
                             <a
                               href={`https://www.google.com/books/edition/_/${selectedBook.google_books_id}`}

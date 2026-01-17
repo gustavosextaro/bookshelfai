@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabaseClient'
 import BrainCanvas from './components/BrainCanvas'
-import { Eraser } from 'lucide-react'
+import { Eraser, BookOpen, History, Mic, Circle, Clock, X, Bot, User, Video, Lightbulb, FileText, FlipVertical } from 'lucide-react'
 
 // Initialize username from localStorage immediately to prevent flash
 const getInitialUsername = () => {
@@ -35,16 +35,16 @@ const ChatInputSection = ({
         top: '-2.5rem',
         left: '0.5rem',
         fontSize: '0.75rem',
-        color: '#6366f1',
-        background: 'rgba(99, 102, 241, 0.1)',
+        color: '#d4b483',
+        background: 'rgba(212, 180, 131, 0.1)',
         padding: '0.25rem 0.75rem',
         borderRadius: '9999px',
-        border: '1px solid rgba(99, 102, 241, 0.2)',
+        border: '1px solid rgba(212, 180, 131, 0.2)',
         display: 'flex',
         alignItems: 'center',
         gap: '0.5rem'
       }}>
-        📚 {selectedBookIds.length} livros selecionados
+        <BookOpen size={14} style={{ flexShrink: 0 }} /> {selectedBookIds.length} livros selecionados
         <button 
           onClick={() => setSelectedBookIds([])}
           style={{ border: 'none', background: 'transparent', color: 'inherit', cursor: 'pointer', padding: 0 }}
@@ -76,21 +76,21 @@ const ChatInputSection = ({
               padding: '0 12px',
               fontSize: '0.875rem',
               gap: '6px',
-              color: selectedBookIds.length > 0 ? '#6366f1' : '#94a3b8',
-              border: selectedBookIds.length > 0 ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid transparent',
-              background: selectedBookIds.length > 0 ? 'rgba(99, 102, 241, 0.1)' : 'transparent'
+              color: selectedBookIds.length > 0 ? '#d4b483' : '#a1a1aa',
+              border: selectedBookIds.length > 0 ? '1px solid rgba(212, 180, 131, 0.3)' : '1px solid transparent',
+              background: selectedBookIds.length > 0 ? 'rgba(212, 180, 131, 0.1)' : 'transparent'
             }} 
             title="Selecionar Livros (Contexto)"
             onClick={() => setShowBookSelector(true)}
           >
-            📚 {selectedBookIds.length > 0 ? `${selectedBookIds.length} selecionados` : 'Contexto'}
+            <BookOpen size={16} /> {selectedBookIds.length > 0 ? `${selectedBookIds.length} selecionados` : 'Contexto'}
           </button>
           <button
             style={styles.iconButton}
             onClick={() => setShowHistory(!showHistory)}
             title="Histórico"
           >
-            📜
+            <History size={18} />
           </button>
           <button 
             style={{
@@ -101,7 +101,7 @@ const ChatInputSection = ({
             onClick={handleVoiceInput}
             title={isRecording ? "Parar gravação (clique ou fale)" : "Entrada de voz"}
           >
-            {isRecording ? '🔴' : '🎤'}
+            {isRecording ? <Circle size={18} fill="currentColor" /> : <Mic size={18} />}
           </button>
           <button 
             style={styles.iconButton}
@@ -144,8 +144,32 @@ export default function AIAgentsHome() {
   const [message, setMessage] = useState('')
   const [output, setOutput] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [showOutput, setShowOutput] = useState(false) // Smooth transition control
   const [showHistory, setShowHistory] = useState(false)
   const [conversationHistory, setConversationHistory] = useState([])
+  
+  // Credit system states
+  const [userCredits, setUserCredits] = useState(null)
+  const [userTier, setUserTier] = useState('free')
+  const [messageCount, setMessageCount] = useState(0)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  // Basic Markdown Renderer
+  const renderMarkdown = (text) => {
+    if (!text) return ''
+    
+    return text
+      // Headers
+      .replace(/^### (.+)$/gm, '<h3 style="font-size: 1.125rem; font-weight: 700; margin: 1.5rem 0 0.75rem; color: #f1f5f9;">$1</h3>')
+      .replace(/^## (.+)$/gm, '<h2 style="font-size: 1.25rem; font-weight: 700; margin: 1.75rem 0 1rem; color: #f1f5f9;">$1</h2>')
+      .replace(/^# (.+)$/gm, '<h1 style="font-size: 1.5rem; font-weight: 700; margin: 2rem 0 1rem; color: #f1f5f9;">$1</h1>')
+      // Bold
+      .replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight: 600; color: #f8fafc;">$1</strong>')
+      // Italic
+      .replace(/\*(.+?)\*/g, '<em style="font-style: italic;">$1</em>')
+      // Line breaks
+      .replace(/\n\n/g, '</p><p style="margin: 0.75rem 0;">')
+  }
+
   const [isRecording, setIsRecording] = useState(false)
   const textareaRef = useRef(null)
   const messagesEndRef = useRef(null)
@@ -261,11 +285,29 @@ export default function AIAgentsHome() {
       insightsCount,
       scriptsCount
     })
+
+    // Load user credits and tier
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('ai_credits_remaining, subscription_tier')
+      .eq('id', currentUser.id)
+      .single()
+
+    if (profileData) {
+      setUserCredits(profileData.ai_credits_remaining)
+      setUserTier(profileData.subscription_tier || 'free')
+    }
   }
 
   async function handleGenerate(customPrompt = null) {
     let prompt = customPrompt || message.trim()
     if (!prompt) return
+
+    // Check credits before generating (free tier only)
+    if (userTier === 'free' && userCredits !== null && userCredits <= 0) {
+      setShowUpgradeModal(true)
+      return
+    }
 
     // Inject Selected Books Context
     if (selectedBookIds.length > 0) {
@@ -285,6 +327,7 @@ export default function AIAgentsHome() {
     
     setConversationHistory(prev => [...prev, userMessage])
     setLoading(true)
+    setShowOutput(false) // Reset fade state
     setOutput(null)
     if (!customPrompt) setMessage('')
 
@@ -323,19 +366,57 @@ export default function AIAgentsHome() {
         timestamp: new Date().toISOString() 
       }
       setConversationHistory(prev => [...prev, aiMessage])
+      
+      // First hide loading, then show output with smooth transition
+      setLoading(false)
       setOutput(data)
+      // Brief delay before fade-in to ensure clean transition
+      requestAnimationFrame(() => {
+        setTimeout(() => setShowOutput(true), 50)
+      })
+      
+      // Decrement credit every message for free tier
+      if (userTier === 'free') {
+        // Call database function to decrement
+        const { data: creditResult, error: creditError } = await supabase.rpc('decrement_user_credit', {
+          user_id: user.id
+        })
+        
+        if (creditError) {
+          console.error('Credit decrement error:', creditError)
+        } else if (creditResult && creditResult.length > 0) {
+          const result = creditResult[0]
+          if (!result.success) {
+            // Show upgrade modal if credits exhausted
+            setShowUpgradeModal(true)
+            setUserCredits(0)
+            // Dispatch event to update CreditIndicator
+            window.dispatchEvent(new CustomEvent('creditsUpdated', {
+              detail: { userId: user.id, credits: 0 }
+            }))
+          } else {
+            setUserCredits(result.remaining_credits)
+            // Dispatch event to update CreditIndicator immediately
+            window.dispatchEvent(new CustomEvent('creditsUpdated', {
+              detail: { userId: user.id, credits: result.remaining_credits }
+            }))
+          }
+        }
+      }
       
       loadUserData()
     } catch (error) {
       console.error('Error generating content:', error)
       const errorMessage = { type: 'error', content: error.message, timestamp: new Date().toISOString() }
       setConversationHistory(prev => [...prev, errorMessage])
+      setLoading(false)
       setOutput({
         error: true,
         message: error.message
       })
-    } finally {
-      setLoading(false)
+      requestAnimationFrame(() => {
+        setTimeout(() => setShowOutput(true), 50)
+      })
     }
   }
 
@@ -396,13 +477,23 @@ export default function AIAgentsHome() {
       width: '100%',
       display: 'flex',
       flexDirection: 'column',
-      alignItems: isHeroMode ? 'flex-start' : 'center',
-      justifyContent: isHeroMode ? 'flex-start' : 'center',
-      padding: '2rem 1.5rem',
       fontFamily: '"Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial',
       color: '#e2e8f0',
       position: 'relative',
       overflow: 'hidden'
+    },
+    scrollableArea: {
+      flex: 1,
+      overflowY: 'auto',
+      overflowX: 'hidden',
+      overscrollBehavior: 'contain',
+      scrollBehavior: 'smooth',
+      width: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: isHeroMode ? 'center' : 'flex-start',
+      padding: '2rem 1.5rem 1rem'
     },
     greetingContainer: {
       width: '100%',
@@ -461,19 +552,29 @@ export default function AIAgentsHome() {
       position: 'relative',
       width: '100%',
       borderRadius: '16px',
-      border: '1px solid rgba(71, 85, 105, 0.3)',
-      background: 'rgba(26, 31, 46, 0.6)',
+      border: '1px solid rgba(161, 161, 170, 0.2)', // Zinc-400 equivalent for border
+      background: 'rgba(24, 24, 27, 0.8)', // Zinc-900 with high opacity
       backdropFilter: 'blur(12px)',
       overflow: 'hidden',
       padding: window.innerWidth < 768 ? '0.75rem' : '1rem',
       boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(99, 102, 241, 0.0)',
       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
     },
+    fixedInputContainer: {
+      position: 'sticky',
+      bottom: 0,
+      width: '100%',
+      maxWidth: '800px',
+      margin: '0 auto',
+      background: 'transparent',
+      padding: '0.5rem 0 1rem',
+      zIndex: 10
+    },
     gradientOverlay: {
       position: 'absolute',
       inset: '1px',
       borderRadius: '1rem',
-      background: 'linear-gradient(to right, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05))',
+      background: 'linear-gradient(to right, rgba(212, 180, 131, 0.03), rgba(193, 159, 110, 0.03))',
       pointerEvents: 'none'
     },
     textarea: {
@@ -487,7 +588,7 @@ export default function AIAgentsHome() {
       color: '#e2e8f0',
       background: 'transparent',
       padding: '1.25rem',
-      minHeight: '70px',
+      minHeight: isHeroMode ? '70px' : '48px',
       maxHeight: '384px',
       lineHeight: '1.6',
       zIndex: 1,
@@ -559,6 +660,15 @@ export default function AIAgentsHome() {
       backdropFilter: 'blur(12px)',
       marginBottom: '1rem' 
     },
+    proseContent: {
+      width: '100%',
+      maxWidth: '720px',
+      padding: '2rem 1.5rem',
+      marginBottom: '2rem',
+      lineHeight: '1.8',
+      fontSize: '0.9375rem',
+      color: '#e8eaed'
+    },
     quickActions: {
       display: 'grid',
       gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
@@ -618,7 +728,7 @@ export default function AIAgentsHome() {
 
   const quickActions = [
     {
-      icon: '🎬',
+      icon: 'Video',
       label: 'Roteiro TikTok',
       description: 'Viralize conteúdo de livros',
       prompt: 'Crie um roteiro viral para TikTok/Reels baseado nos livros da minha biblioteca',
@@ -626,7 +736,7 @@ export default function AIAgentsHome() {
       bgColor: 'rgba(99, 102, 241, 0.1)'
     },
     {
-      icon: '💡',
+      icon: 'Lightbulb',
       label: 'Gerar Ideias',
       description: '10 conceitos de vídeo',
       prompt: 'Me dê 5 ideias criativas de conteúdo não-genéricas',
@@ -634,7 +744,7 @@ export default function AIAgentsHome() {
       bgColor: 'rgba(245, 158, 11, 0.1)'
     },
     {
-      icon: '📝',
+      icon: 'FileText',
       label: 'Resumo Rápido',
       description: 'Capítulos essenciais',
       prompt: 'Faça um resumo em tópicos dos principais insights',
@@ -642,7 +752,7 @@ export default function AIAgentsHome() {
       bgColor: 'rgba(16, 185, 129, 0.1)'
     },
     {
-      icon: '🎴',
+      icon: 'FlipVertical',
       label: 'Flashcards',
       description: 'Estudo ativo & revisão',
       prompt: 'Crie flashcards para estudar os conceitos principais',
@@ -673,25 +783,9 @@ export default function AIAgentsHome() {
 
 
   return (
-    <div style={{
-      ...styles.container,
-      alignItems: 'center',
-      justifyContent: 'center'
-    }}>
-      {/* Scrollable Main Area */}
-      <div className="no-scrollbar" style={{
-        flex: 1,
-        width: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingTop: isHeroMode ? '0' : '0.5rem',
-        paddingBottom: '160px', // Extra padding to clear the fixed footer
-        overflowY: isHeroMode ? 'hidden' : 'auto',
-        overflowX: 'hidden', // prevent horizontal scroll
-        width: '100%'
-      }}>
+    <div style={styles.container}>
+      {/* Scrollable Content Area - ONLY AREA THAT SCROLLS */}
+      <div className="chat-scroll-area" style={styles.scrollableArea}>
         <div style={{
           display: 'flex',
           flexDirection: 'column',
@@ -699,10 +793,7 @@ export default function AIAgentsHome() {
           gap: '1rem',
           width: '100%',
           maxWidth: '800px',
-          position: 'relative',
-          zIndex: 1,
-          marginTop: '0',
-          paddingTop: '8rem'
+          flex: isHeroMode ? 'none' : 1
         }}>
           {isHeroMode && (
             <>
@@ -743,7 +834,11 @@ export default function AIAgentsHome() {
                     disabled={loading}
                   >
                     <div style={styles.actionIcon}>
-                      {action.icon}
+                      {action.icon === 'Video' ? <Video size={24} /> :
+                       action.icon === 'Lightbulb' ? <Lightbulb size={24} /> :
+                       action.icon === 'FileText' ? <FileText size={24} /> :
+                       action.icon === 'FlipVertical' ? <FlipVertical size={24} /> :
+                       action.icon}
                     </div>
                     <div>
                       <span style={styles.actionLabel}>{action.label}</span>
@@ -771,13 +866,20 @@ export default function AIAgentsHome() {
           )}
 
           {output && !output.error && (
-            <div style={styles.card}>
+            <div 
+              style={{
+                ...styles.proseContent,
+                opacity: showOutput ? 1 : 0,
+                transform: showOutput ? 'translateY(0)' : 'translateY(8px)',
+                transition: 'opacity 0.4s ease-out, transform 0.4s ease-out'
+              }}
+            >
               <div style={{ marginBottom: '1rem' }}>
                 <div style={{ fontSize: '1.125rem', fontWeight: '700', color: 'rgba(255, 255, 255, 0.92)', marginBottom: '0.25rem' }}>
                   Conteúdo Gerado
                 </div>
                 <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.62)' }}>
-                  <span>⏱️ {output.duration_estimate}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> {output.duration_estimate}</span>
                   <span>📊 Usos: {output.usage?.remaining}/{output.usage?.limit}</span>
                 </div>
               </div>
@@ -798,24 +900,25 @@ export default function AIAgentsHome() {
                         border: '1px solid rgba(255, 255, 255, 0.10)',
                         borderRadius: '0.5rem'
                       }}>
-                        📚 {book}
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><BookOpen size={14} /> {book}</span>
                       </span>
                     ))}
                   </div>
                 </div>
               )}
 
-              <div style={{
-                whiteSpace: 'pre-wrap',
-                fontSize: '0.875rem',
-                lineHeight: '1.7',
-                color: 'rgba(255, 255, 255, 0.92)',
-                background: 'rgba(255, 255, 255, 0.03)',
-                borderRadius: '0.75rem',
-                padding: '1rem'
-              }}>
-                {output.result}
-              </div>
+              <div 
+                className="ai-output-content"
+                style={{
+                  fontSize: '0.9375rem',
+                  lineHeight: '1.75',
+                  color: '#e8eaed',
+                  background: 'transparent',
+                  padding: '0.5rem 0rem 1rem 0rem',
+                  wordBreak: 'break-word'
+                }}
+                dangerouslySetInnerHTML={{ __html: `<p style="margin: 0.75rem 0;">${renderMarkdown(output.result)}</p>` }}
+              />
             </div>
           )}
 
@@ -826,27 +929,22 @@ export default function AIAgentsHome() {
               background: 'rgba(255, 92, 122, 0.05)'
             }}>
               <div style={{ fontSize: '1rem', fontWeight: '600', color: '#ff5c7a', marginBottom: '0.5rem' }}>
-                ❌ Erro
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><X size={16} /> Erro</span>
               </div>
               <div style={{ fontSize: '0.875rem', color: 'rgba(255, 255, 255, 0.62)' }}>{output.message}</div>
             </div>
           )}
+          
           
           {/* Auto-scroll anchor */}
           <div ref={messagesEndRef} />
         </div>
       </div>
 
-      {/* Footer / Input Area - Fixed at bottom - Only visible when NOT in Hero Mode */}
+      {/* Fixed Input Area - ONLY VISIBLE IN CHAT MODE */}
       {!isHeroMode && (
-        <div style={{ 
-          width: '100%', 
-          maxWidth: '800px', 
-          paddingTop: '1rem',
-          position: 'relative',
-          zIndex: 10
-        }}>
-           <ChatInputSection {...chatInputProps} />
+        <div style={styles.fixedInputContainer}>
+          <ChatInputSection {...chatInputProps} />
         </div>
       )}
 
@@ -948,7 +1046,7 @@ export default function AIAgentsHome() {
               <button 
                 className="btn btnPrimary"
                 onClick={() => setShowBookSelector(false)}
-                style={{ background: '#6366f1', color: 'white', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '0.5rem', cursor: 'pointer' }}
+                style={{ background: '#d4b483', color: '#09090b', fontWeight: '500', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '0.5rem', cursor: 'pointer' }}
               >
                 Confirmar seleção ({selectedBookIds.length || 'Todos'})
               </button>
@@ -998,7 +1096,7 @@ export default function AIAgentsHome() {
                 justifyContent: 'space-between'
               }}>
                 <h3 style={{ margin: 0, fontSize: isMobile ? '1rem' : '1.25rem', fontWeight: '600', color: '#ffffff' }}>
-                  📜 Histórico de Conversas
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><History size={20} /> Histórico de Conversas</span>
                 </h3>
                 <button
                   onClick={() => setShowHistory(false)}
@@ -1044,7 +1142,9 @@ export default function AIAgentsHome() {
                         alignItems: 'center',
                         gap: '0.5rem'
                       }}>
-                        <span>{msg.type === 'user' ? '👤 Você' : msg.type === 'error' ? '❌ Erro' : '🤖 IA'}</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {msg.type === 'user' ? <><User size={14} /> Você</> : msg.type === 'error' ? <><X size={14} /> Erro</> : <><Bot size={14} /> IA</>}
+                        </span>
                         <span>•</span>
                         <span>{new Date(msg.timestamp).toLocaleString('pt-BR')}</span>
                       </div>
@@ -1063,6 +1163,62 @@ export default function AIAgentsHome() {
             </div>
           </div>
         )}
+
+      {/* Upgrade Modal */}
+      {showUpgradeModal && (
+        <div 
+          className="modalOverlay"
+          onClick={() => setShowUpgradeModal(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'grid',
+            placeItems: 'center',
+            padding: '16px',
+            zIndex: 100
+          }}
+        >
+          <div 
+            className="modal card" 
+            onClick={e => e.stopPropagation()}
+            style={{
+              maxWidth: '480px',
+              padding: '32px',
+              textAlign: 'center'
+            }}
+          >
+            <div style={{ fontSize: '3rem', marginBottom: '16px' }}>⚡</div>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '12px' }}>
+              Créditos Esgotados
+            </h2>
+            <p style={{ color: 'var(--muted)', marginBottom: '24px', lineHeight: 1.6 }}>
+              Você usou todas as suas <strong>10 mensagens mensais gratuitas</strong>.
+              <br /><br />
+              Faça upgrade para Premium e tenha <strong>mensagens ilimitadas</strong>!
+            </p>
+            
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button 
+                className="btn"
+                onClick={() => setShowUpgradeModal(false)}
+              >
+                Cancelar
+              </button>
+              <button 
+                className="btn btnPrimary"
+                onClick={() => {
+                  setShowUpgradeModal(false)
+                  window.location.href = '#planos'
+                }}
+              >
+                Ver Planos
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes fadeIn {

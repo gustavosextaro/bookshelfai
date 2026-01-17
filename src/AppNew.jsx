@@ -5,7 +5,10 @@ import AIAgentsHome from './AIAgentsHome'
 import LibraryPage from './LibraryPage'
 import ProfilePage from './ProfilePage'
 import SettingsPage from './SettingsPage'
-import { Bot, Library, Settings, User as UserIcon, LogOut, BookOpen } from 'lucide-react'
+import PricingPage from './PricingPage'
+import LandingPage from './LandingPage'
+import CreditIndicator from './components/CreditIndicator'
+import { Bot, Library, Settings, User as UserIcon, LogOut, BookOpen, Mail, CreditCard } from 'lucide-react'
 
 function Auth({ onAuthed }) {
   const [mode, setMode] = useState('signin')
@@ -14,10 +17,26 @@ function Auth({ onAuthed }) {
   const [username, setUsername] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  const [successMsg, setSuccessMsg] = useState(null)
+
+  async function handleGoogleLogin() {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`
+        }
+      })
+      if (error) throw error
+    } catch (e) {
+      setError(e?.message || 'Erro ao fazer login com Google')
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
     setError(null)
+    setSuccessMsg(null)
     setBusy(true)
     try {
       if (mode === 'signup') {
@@ -31,7 +50,8 @@ function Auth({ onAuthed }) {
           }
         })
         if (err) throw err
-        onAuthed()
+        setSuccessMsg(`Cadastro realizado! Verifique o e-mail enviado para ${email} para confirmar sua conta.`)
+        setPassword('')
       } else {
         const { error: err } = await supabase.auth.signInWithPassword({ email, password })
         if (err) throw err
@@ -64,32 +84,106 @@ function Auth({ onAuthed }) {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 14 }}>
-            <div>
-              <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>Email</label>
-              <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            </div>
-            {mode === 'signup' && (
-              <div>
-                <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>Nome de usuário</label>
-                <input className="input" type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Como quer ser chamado?" />
-                <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>Ex: Gustavo, Maria, João...</div>
+          {successMsg ? (
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <div style={{ 
+                width: '60px', 
+                height: '60px', 
+                background: 'rgba(99, 102, 241, 0.1)', 
+                color: 'var(--brand)',
+                borderRadius: '50%', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                margin: '0 auto 16px auto',
+                fontSize: '24px'
+              }}>
+                <Mail size={24} />
               </div>
-            )}
-            <div>
-              <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>Senha</label>
-              <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-            </div>
-            {error ? <div style={{ color: 'var(--danger)', fontSize: 12 }}>{error}</div> : null}
-            <div className="row" style={{ justifyContent: 'space-between', marginTop: 8 }}>
-              <button className="btn" type="button" onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}>
-                {mode === 'signin' ? 'Criar conta' : 'Já tenho conta'}
+              <h3 style={{ fontSize: '18px', marginBottom: '8px', color: 'var(--text)' }}>Verifique seu e-mail</h3>
+              <p className="muted" style={{ fontSize: '14px', lineHeight: '1.5', marginBottom: '24px' }}>
+                {successMsg}
+              </p>
+              <button 
+                className="btn btnPrimary" 
+                style={{ width: '100%' }}
+                onClick={() => {
+                  setSuccessMsg(null)
+                  setMode('signin')
+                }}
+              >
+                Voltar para Login
               </button>
-              <button className="btn btnPrimary" type="submit" disabled={busy}>
-                {busy ? 'Aguarde…' : mode === 'signin' ? 'Entrar' : 'Cadastrar'}
-              </button>
             </div>
-          </form>
+          ) : (
+            <>
+              {/* Google OAuth Button */}
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                className="btn"
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  padding: '12px',
+                  background: 'white',
+                  color: '#1f1f1f',
+                  border: '1px solid #dadce0',
+                  fontWeight: 500,
+                  fontSize: '14px'
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 18 18">
+                  <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>
+                  <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+                  <path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/>
+                  <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+                </svg>
+                Continuar com Google
+              </button>
+
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                margin: '8px 0'
+              }}>
+                <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+                <span style={{ fontSize: '12px', color: 'var(--muted)' }}>ou</span>
+                <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+              </div>
+
+              <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 14 }}>
+              <div>
+                <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>Email</label>
+                <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              </div>
+              {mode === 'signup' && (
+                <div>
+                  <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>Nome de usuário</label>
+                  <input className="input" type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Como quer ser chamado?" />
+                  <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>Ex: Gustavo, Maria, João...</div>
+                </div>
+              )}
+              <div>
+                <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>Senha</label>
+                <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              </div>
+              {error ? <div style={{ color: 'var(--danger)', fontSize: 12 }}>{error}</div> : null}
+              <div className="row" style={{ justifyContent: 'space-between', marginTop: 8 }}>
+                <button className="btn" type="button" onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}>
+                  {mode === 'signin' ? 'Criar conta' : 'Já tenho conta'}
+                </button>
+                <button className="btn btnPrimary" type="submit" disabled={busy}>
+                  {busy ? 'Aguarde…' : mode === 'signin' ? 'Entrar' : 'Cadastrar'}
+                </button>
+              </div>
+            </form>
+            </>
+          )}
         </div>
       </main>
     </div>
@@ -122,6 +216,7 @@ export default function App() {
   const [session, setSession] = useState(null)
   const [userProfile, setUserProfile] = useState(null)
   const [currentPage, setCurrentPage] = useState('ai-agents') // 'ai-agents', 'library', 'profile', 'settings'
+  const [showAuth, setShowAuth] = useState(false) // To control landing vs auth screen
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -129,7 +224,7 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Fetch basics when session exists
+  // Load profile when session exists
   useEffect(() => {
     if (session?.user) {
       loadUserProfile(session.user)
@@ -139,27 +234,56 @@ export default function App() {
   async function loadUserProfile(user, directData = null) {
     // If direct data is provided (from ProfilePage save), use it immediately
     if (directData) {
-      setUserProfile({ 
+      const profile = { 
+        id: user.id,
         username: directData.username, 
         email: user.email 
-      })
+      }
+      setUserProfile(profile)
+      // Cache for faster next load
+      localStorage.setItem('bookshelfai.cachedProfile', JSON.stringify(profile))
       return
     }
 
-    // Otherwise, fetch from DB
+    // Cache-first: show cached data immediately to avoid delay
+    const cachedProfile = localStorage.getItem('bookshelfai.cachedProfile')
+    if (cachedProfile) {
+      try {
+        const cached = JSON.parse(cachedProfile)
+        if (cached.id === user.id) {
+          setUserProfile(cached)
+        }
+      } catch (e) { /* ignore parse errors */ }
+    }
+
+    // Then fetch fresh data from DB
     const { data } = await supabase.from('profiles').select('username').eq('id', user.id).single()
     const username = data?.username || 
                      localStorage.getItem('bookshelfai.username') || 
                      user.email.split('@')[0]
-    setUserProfile({ username, email: user.email })
+    const profile = { id: user.id, username, email: user.email }
+    setUserProfile(profile)
+    // Update cache
+    localStorage.setItem('bookshelfai.cachedProfile', JSON.stringify(profile))
   }
 
   async function handleSignOut() {
     await supabase.auth.signOut()
     setSession(null)
+    setShowAuth(false) // Reset to landing page
   }
 
+  // If not authenticated, show landing page or auth
   if (!session) {
+    if (!showAuth) {
+      return (
+        <LandingPage 
+          onLogin={() => setShowAuth(true)}
+          onSignup={() => setShowAuth(true)}
+        />
+      )
+    }
+    
     return (
       <>
         <InfiniteGridBackground />
@@ -203,6 +327,12 @@ export default function App() {
               label="Biblioteca"
             />
             <NavItem 
+              active={currentPage === 'planos'} 
+              onClick={() => setCurrentPage('planos')}
+              icon={<CreditCard size={20} />}
+              label="Planos"
+            />
+            <NavItem 
               active={currentPage === 'settings'} 
               onClick={() => setCurrentPage('settings')}
               icon={<Settings size={20} />}
@@ -219,6 +349,9 @@ export default function App() {
             flexDirection: 'column',
             gap: '8px'
           }}>
+            {/* Credit Indicator */}
+            <CreditIndicator userId={userProfile?.id} />
+            
             <button 
               className={currentPage === 'profile' ? 'btn btnPrimary' : 'btn'}
               onClick={() => setCurrentPage('profile')}
@@ -283,6 +416,7 @@ export default function App() {
         <main className="main-content">
           {currentPage === 'ai-agents' && <AIAgentsHome user={session?.user} />}
           {currentPage === 'library' && <LibraryPage user={session?.user} />}
+          {currentPage === 'planos' && <PricingPage />}
           {currentPage === 'settings' && <SettingsPage />}
           {currentPage === 'profile' && <ProfilePage onProfileUpdate={(data) => session?.user && loadUserProfile(session.user, data)} />}
         </main>

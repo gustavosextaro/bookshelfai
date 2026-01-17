@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from './supabaseClient'
+import { User, Edit, Library, Trash2, BarChart3, Star, Target, Sparkles, BookOpen } from 'lucide-react'
 
 export default function ProfilePage({ onProfileUpdate }) {
   const [profile, setProfile] = useState(null)
@@ -267,13 +268,6 @@ export default function ProfilePage({ onProfileUpdate }) {
       const token = session.session?.access_token
       const user = session.session?.user
 
-      // Get OpenAI API key from localStorage
-      const openaiApiKey = localStorage.getItem('bookshelfai.openai_api_key')
-      
-      if (!openaiApiKey) {
-        throw new Error('Por favor, configure sua OpenAI API Key primeiro na aba Configurações.')
-      }
-
       // 1. Fetch ALL User Books for Context
       const { data: books } = await supabase
         .from('books')
@@ -360,7 +354,7 @@ Formato de resposta (JSON):
   return (
     <div style={{ padding: '30px', maxWidth: '900px', margin: '0 auto' }}>
       <div style={{ fontSize: '24px', fontWeight: '700', marginBottom: '30px' }}>
-        👤 Meu Perfil
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><User size={24} /> Meu Perfil</span>
       </div>
 
       {/* Profile Header */}
@@ -411,14 +405,14 @@ Formato de resposta (JSON):
                 </div>
               </div>
             </div>
-            <button className="btn" onClick={() => setEditing(true)}>✏️ Editar</button>
+            <button className="btn" onClick={() => setEditing(true)}><span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Edit size={16} /> Editar</span></button>
           </div>
         )}
       </div>
 
       {/* Favorite Books Section */}
       <div style={{ marginBottom: '30px' }}>
-        <div style={{ fontWeight: '700', fontSize: '16px', marginBottom: '16px' }}>⭐ Livros Favoritos</div>
+        <div style={{ fontWeight: '700', fontSize: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}><Star size={16} /> Livros Favoritos</div>
         <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
           {[0, 1, 2, 3].map(index => {
             const bookId = favoriteBooks[index]
@@ -463,7 +457,7 @@ Formato de resposta (JSON):
                      
                      {/* Fallback emoji if no cover */}
                      {!book.cover_url && (
-                       <div style={{ fontSize: '24px', zIndex: 0 }}>📕</div>
+                       <div style={{ fontSize: '24px', zIndex: 0 }}><BookOpen size={24} /></div>
                      )}
                   </>
                 ) : (
@@ -477,7 +471,7 @@ Formato de resposta (JSON):
 
       {/* Stats Dashboard */}
       <div style={{ marginBottom: '24px' }}>
-        <div style={{ fontWeight: '700', fontSize: '16px', marginBottom: '12px' }}>📊 Estatísticas de IA</div>
+        <div style={{ fontWeight: '700', fontSize: '16px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}><BarChart3 size={16} /> Estatísticas de IA</div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px' }}>
           <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
@@ -498,7 +492,7 @@ Formato de resposta (JSON):
       {/* Roteiros por Livro */}
       {scriptsByBook.length > 0 && (
         <div style={{ marginBottom: '24px' }}>
-          <div style={{ fontWeight: '700', marginBottom: '12px', fontSize: '16px' }}>📚 Roteiros por Livro</div>
+          <div style={{ fontWeight: '700', marginBottom: '12px', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}><Library size={18} /> Roteiros por Livro</div>
           <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
             {scriptsByBook.map((item, idx) => (
               <div
@@ -526,9 +520,9 @@ Formato de resposta (JSON):
       {/* Linha Editorial */}
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-          <div style={{ fontWeight: '700', fontSize: '16px' }}>🎯 Minha Linha Editorial</div>
+          <div style={{ fontWeight: '700', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}><Target size={16} /> Minha Linha Editorial</div>
           <button className="btn" onClick={handleGenerateEditorial} disabled={generatingEditorial}>
-            {generatingEditorial ? 'Analisando Biblioteca...' : '✨ Gerar Nova Linha'}
+            {generatingEditorial ? 'Analisando Biblioteca...' : <><Sparkles size={16} style={{ display: 'inline', marginRight: 4 }} /> Gerar Nova Linha</>}
           </button>
         </div>
 
@@ -591,7 +585,7 @@ Formato de resposta (JSON):
             boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
           }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '700' }}>📚 Minha Biblioteca</h2>
+              <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}><Library size={24} /> Minha Biblioteca</h2>
               <button 
                 onClick={() => setShowFavoriteSelector(false)}
                 style={{
@@ -638,7 +632,7 @@ Formato de resposta (JSON):
                 onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
                 onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
               >
-                <div style={{ fontSize: '32px', marginBottom: '8px' }}>🗑️</div>
+                <Trash2 size={32} style={{ marginBottom: '8px', color: '#ef4444' }} />
                 <div style={{ fontSize: '12px', color: '#ef4444', fontWeight: '600', textAlign: 'center', padding: '0 8px' }}>Remover</div>
               </div>
 
@@ -721,7 +715,7 @@ Formato de resposta (JSON):
                       transform: 'translate(-50%, -50%)',
                       fontSize: '48px',
                       opacity: 0.3
-                    }}>📕</div>
+                    }}><BookOpen size={48} style={{ opacity: 0.3 }} /></div>
                   )}
                 </div>
               ))}

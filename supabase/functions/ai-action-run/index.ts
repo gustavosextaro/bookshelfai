@@ -57,8 +57,9 @@ serve(async (req) => {
 
         if (historyError) console.warn('Failed to fetch history:', historyError)
 
-        // Hardcoded OpenAI key
-        const apiKey = 'REDACTED'
+        // OpenAI API Key from environment variable (secure)
+        const apiKey = Deno.env.get('OPENAI_API_KEY') ?? ''
+        if (!apiKey) throw new Error('OPENAI_API_KEY not configured')
 
         // =============================================
         // BUILD LIBRARY CONTEXT
