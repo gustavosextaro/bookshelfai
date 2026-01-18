@@ -26,33 +26,131 @@ const ChatInputSection = ({
   textareaRef,
   handleGenerate,
   showBookSelector,
-  setShowBookSelector
+  setShowBookSelector,
+  activeContext,
+  setActiveContext,
+  showContextSelector,
+  setShowContextSelector
 }) => (
   <div style={styles.chatInputWrapper}>
-    {selectedBookIds.length > 0 && (
-      <div style={{
-        position: 'absolute',
-        top: '-2.5rem',
-        left: '0.5rem',
-        fontSize: '0.75rem',
-        color: '#d4b483',
-        background: 'rgba(212, 180, 131, 0.1)',
-        padding: '0.25rem 0.75rem',
-        borderRadius: '9999px',
-        border: '1px solid rgba(212, 180, 131, 0.2)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.5rem'
-      }}>
-        <BookOpen size={14} style={{ flexShrink: 0 }} /> {selectedBookIds.length} livros selecionados
-        <button 
-          onClick={() => setSelectedBookIds([])}
-          style={{ border: 'none', background: 'transparent', color: 'inherit', cursor: 'pointer', padding: 0 }}
-        >
-          ×
-        </button>
+    {/* Context indicator badge */}
+    <div style={{
+      position: 'absolute',
+      top: '-2.5rem',
+      left: '0.5rem',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.75rem'
+    }}>
+      {/* Context Badge */}
+      <div 
+        onClick={() => setShowContextSelector(!showContextSelector)}
+        style={{
+          fontSize: '0.75rem',
+          color: activeContext === 'nexus' ? '#d4b483' : '#6366f1',
+          background: activeContext === 'nexus' ? 'rgba(212, 180, 131, 0.1)' : 'rgba(99, 102, 241, 0.1)',
+          padding: '0.25rem 0.75rem',
+          borderRadius: '9999px',
+          border: `1px solid ${activeContext === 'nexus' ? 'rgba(212, 180, 131, 0.2)' : 'rgba(99, 102, 241, 0.2)'}`,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          cursor: 'pointer',
+          transition: 'all 0.2s'
+        }}
+      >
+        {activeContext === 'nexus' ? <BookOpen size={14} /> : <Bot size={14} />}
+        {activeContext === 'nexus' ? 'Nexus de Leitura' : 'Produtor de Conteúdo'}
+        <span style={{ opacity: 0.6 }}>▼</span>
       </div>
-    )}
+
+      {/* Book count badge - only for Nexus */}
+      {activeContext === 'nexus' && selectedBookIds.length > 0 && (
+        <div style={{
+          fontSize: '0.75rem',
+          color: '#d4b483',
+          background: 'rgba(212, 180, 131, 0.1)',
+          padding: '0.25rem 0.75rem',
+          borderRadius: '9999px',
+          border: '1px solid rgba(212, 180, 131, 0.2)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          <BookOpen size={14} style={{ flexShrink: 0 }} /> {selectedBookIds.length} livros
+          <button 
+            onClick={() => setSelectedBookIds([])}
+            style={{ border: 'none', background: 'transparent', color: 'inherit', cursor: 'pointer', padding: 0 }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* Context Dropdown */}
+      {showContextSelector && (
+        <div style={{
+          position: 'absolute',
+          top: '2rem',
+          left: 0,
+          background: 'rgba(24, 24, 27, 0.95)',
+          border: '1px solid rgba(161, 161, 170, 0.2)',
+          borderRadius: '0.75rem',
+          padding: '0.5rem',
+          zIndex: 100,
+          minWidth: '200px',
+          backdropFilter: 'blur(12px)',
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.4)'
+        }}>
+          <button
+            onClick={() => { setActiveContext('produtor'); setShowContextSelector(false); setSelectedBookIds([]); }}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              padding: '0.75rem',
+              border: 'none',
+              background: activeContext === 'produtor' ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+              color: activeContext === 'produtor' ? '#818cf8' : '#e2e8f0',
+              borderRadius: '0.5rem',
+              cursor: 'pointer',
+              textAlign: 'left',
+              fontSize: '0.875rem'
+            }}
+          >
+            <Bot size={18} />
+            <div>
+              <div style={{ fontWeight: 600 }}>Produtor de Conteúdo</div>
+              <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>Entrevista + perfil pessoal</div>
+            </div>
+          </button>
+          <button
+            onClick={() => { setActiveContext('nexus'); setShowContextSelector(false); }}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              padding: '0.75rem',
+              border: 'none',
+              background: activeContext === 'nexus' ? 'rgba(212, 180, 131, 0.15)' : 'transparent',
+              color: activeContext === 'nexus' ? '#d4b483' : '#e2e8f0',
+              borderRadius: '0.5rem',
+              cursor: 'pointer',
+              textAlign: 'left',
+              fontSize: '0.875rem'
+            }}
+          >
+            <BookOpen size={18} />
+            <div>
+              <div style={{ fontWeight: 600 }}>Meu Nexus de Leitura</div>
+              <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>Baseado na sua biblioteca</div>
+            </div>
+          </button>
+        </div>
+      )}
+    </div>
 
 
 
@@ -63,28 +161,34 @@ const ChatInputSection = ({
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Como posso ajudar a transformar seus livros hoje?"
+        placeholder={activeContext === 'nexus' 
+          ? "Como posso ajudar a transformar seus livros hoje?" 
+          : "Olá! Vamos criar conteúdo incrível juntos?"
+        }
         style={styles.textarea}
         rows={1}
       />
       <div style={styles.inputActions}>
         <div style={styles.leftActions}>
-          <button 
-            style={{
-              ...styles.iconButton,
-              width: 'auto',
-              padding: '0 12px',
-              fontSize: '0.875rem',
-              gap: '6px',
-              color: selectedBookIds.length > 0 ? '#d4b483' : '#a1a1aa',
-              border: selectedBookIds.length > 0 ? '1px solid rgba(212, 180, 131, 0.3)' : '1px solid transparent',
-              background: selectedBookIds.length > 0 ? 'rgba(212, 180, 131, 0.1)' : 'transparent'
-            }} 
-            title="Selecionar Livros (Contexto)"
-            onClick={() => setShowBookSelector(true)}
-          >
-            <BookOpen size={16} /> {selectedBookIds.length > 0 ? `${selectedBookIds.length} selecionados` : 'Contexto'}
-          </button>
+          {/* Book selector - only show for Nexus context */}
+          {activeContext === 'nexus' && (
+            <button 
+              style={{
+                ...styles.iconButton,
+                width: 'auto',
+                padding: '0 12px',
+                fontSize: '0.875rem',
+                gap: '6px',
+                color: selectedBookIds.length > 0 ? '#d4b483' : '#a1a1aa',
+                border: selectedBookIds.length > 0 ? '1px solid rgba(212, 180, 131, 0.3)' : '1px solid transparent',
+                background: selectedBookIds.length > 0 ? 'rgba(212, 180, 131, 0.1)' : 'transparent'
+              }} 
+              title="Selecionar Livros (Contexto)"
+              onClick={() => setShowBookSelector(true)}
+            >
+              <BookOpen size={16} /> {selectedBookIds.length > 0 ? `${selectedBookIds.length} selecionados` : 'Livros'}
+            </button>
+          )}
           <button
             style={styles.iconButton}
             onClick={() => setShowHistory(!showHistory)}
@@ -140,6 +244,8 @@ export default function AIAgentsHome() {
   const [books, setBooks] = useState([])
   const [selectedBookIds, setSelectedBookIds] = useState([])
   const [showBookSelector, setShowBookSelector] = useState(false)
+  const [activeContext, setActiveContext] = useState('produtor') // 'produtor' | 'nexus'
+  const [showContextSelector, setShowContextSelector] = useState(false)
   
   const [message, setMessage] = useState('')
   const [output, setOutput] = useState(null)
@@ -239,13 +345,14 @@ export default function AIAgentsHome() {
 
     setUser(currentUser)
 
-    // Priority 1: Check localStorage first
+    // Priority 1: Check localStorage first - already set in getInitialUsername
     const savedUsername = localStorage.getItem('bookshelfai.username')
     
     if (savedUsername) {
-      setUsername(savedUsername)
+      // Username already set from initialization, don't overwrite
+      // This prevents the flash of "Usuário" while loading
     } else {
-      // Priority 2: Fallback to database
+      // Priority 2: Fallback to database only if no localStorage
       const { data: profile } = await supabase
         .from('profiles')
         .select('username')
@@ -254,6 +361,8 @@ export default function AIAgentsHome() {
 
       if (profile?.username) {
         setUsername(profile.username)
+        // Cache for next time
+        localStorage.setItem('bookshelfai.username', profile.username)
       }
     }
 
@@ -309,18 +418,17 @@ export default function AIAgentsHome() {
       return
     }
 
-    // Inject Selected Books Context
-    if (selectedBookIds.length > 0) {
+    // Inject Selected Books Context - ONLY for Nexus context
+    if (activeContext === 'nexus' && selectedBookIds.length > 0) {
       const selectedTitles = books
         .filter(b => selectedBookIds.includes(b.id))
         .map(b => `"${b.title}"`)
         .join(', ')
         
       prompt += `\n\n[CONTEXTO IMPORTANTE: Use APENAS o conhecimento dos seguintes livros para esta resposta: ${selectedTitles}]`
-    } else if (books.length > 0) {
-       // Implicitly context is all books, but explicit mentions help RAG agents
-       // We let the backend handle 'all' usually, or we can list all titles if we want strictness.
-       // For now, leaving it open if no specific selection is made (default behavior).
+    } else if (activeContext === 'nexus' && books.length > 0) {
+       // Implicitly context is all books for Nexus mode
+       // We let the backend handle 'all' usually
     }
 
     const userMessage = { type: 'user', content: customPrompt || message.trim(), timestamp: new Date().toISOString() }
@@ -346,6 +454,8 @@ export default function AIAgentsHome() {
         body: JSON.stringify({ 
           type: 'chat',
           customPrompt: prompt,
+          context: activeContext, // Pass the active context to backend
+          bookIds: activeContext === 'nexus' ? selectedBookIds : [], // Only pass books for nexus
           conversationHistory: conversationHistory.filter(msg => msg.type !== 'error').map(msg => ({
             role: msg.type === 'user' ? 'user' : 'assistant',
             content: msg.content
@@ -778,7 +888,11 @@ export default function AIAgentsHome() {
     textareaRef,
     handleGenerate,
     showBookSelector,
-    setShowBookSelector
+    setShowBookSelector,
+    activeContext,
+    setActiveContext,
+    showContextSelector,
+    setShowContextSelector
   }
 
 
@@ -817,6 +931,124 @@ export default function AIAgentsHome() {
                     <span style={styles.statText}>{brainStats.insightsCount} insights novos</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Context Selection Cards - Clear Mode Choice */}
+              <div style={{
+                display: 'flex',
+                gap: '1rem',
+                width: '100%',
+                maxWidth: '800px',
+                marginBottom: '1.5rem',
+                flexDirection: isMobile ? 'column' : 'row'
+              }}>
+                {/* Produtor de Conteúdo Card */}
+                <button
+                  onClick={() => setActiveContext('produtor')}
+                  style={{
+                    flex: 1,
+                    padding: '1.25rem',
+                    borderRadius: '1rem',
+                    border: activeContext === 'produtor' 
+                      ? '2px solid #6366f1' 
+                      : '1px solid rgba(255, 255, 255, 0.1)',
+                    background: activeContext === 'produtor' 
+                      ? 'rgba(99, 102, 241, 0.15)' 
+                      : 'rgba(24, 24, 27, 0.6)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.2s',
+                    backdropFilter: 'blur(12px)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.75rem'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '0.75rem',
+                      background: 'rgba(99, 102, 241, 0.2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Bot size={22} color="#818cf8" />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '1rem', color: '#f1f5f9' }}>
+                        Produtor de Conteúdo
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                        Entrevista personalizada
+                      </div>
+                    </div>
+                  </div>
+                  <p style={{
+                    fontSize: '0.8125rem',
+                    color: '#cbd5e1',
+                    margin: 0,
+                    lineHeight: 1.5
+                  }}>
+                    O agente vai te conhecer através de perguntas sobre seu nicho, 
+                    dores, objetivos e estilo para criar roteiros 100% personalizados.
+                  </p>
+                </button>
+
+                {/* Nexus de Leitura Card */}
+                <button
+                  onClick={() => setActiveContext('nexus')}
+                  style={{
+                    flex: 1,
+                    padding: '1.25rem',
+                    borderRadius: '1rem',
+                    border: activeContext === 'nexus' 
+                      ? '2px solid #d4b483' 
+                      : '1px solid rgba(255, 255, 255, 0.1)',
+                    background: activeContext === 'nexus' 
+                      ? 'rgba(212, 180, 131, 0.15)' 
+                      : 'rgba(24, 24, 27, 0.6)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.2s',
+                    backdropFilter: 'blur(12px)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.75rem'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '0.75rem',
+                      background: 'rgba(212, 180, 131, 0.2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <BookOpen size={22} color="#d4b483" />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '1rem', color: '#f1f5f9' }}>
+                        Meu Nexus de Leitura
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                        {brainStats.booksCount} livros na biblioteca
+                      </div>
+                    </div>
+                  </div>
+                  <p style={{
+                    fontSize: '0.8125rem',
+                    color: '#cbd5e1',
+                    margin: 0,
+                    lineHeight: 1.5
+                  }}>
+                    Crie conteúdo baseado na sua biblioteca de livros. 
+                    O agente usa seus livros para gerar roteiros com repertório único.
+                  </p>
+                </button>
               </div>
               
               {/* Centralized Input Area */}
@@ -884,7 +1116,8 @@ export default function AIAgentsHome() {
                 </div>
               </div>
 
-              {((output.metadata?.books_used?.length > 0) || (selectedBookIds.length > 0)) && (
+              {/* Only show books section in Nexus mode */}
+              {activeContext === 'nexus' && ((output.metadata?.books_used?.length > 0) || (selectedBookIds.length > 0)) && (
                 <div style={{ marginBottom: '1rem' }}>
                   <div style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.62)', marginBottom: '0.5rem' }}>Livros base:</div>
                   <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>

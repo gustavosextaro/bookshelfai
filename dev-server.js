@@ -16,60 +16,124 @@ app.use(express.json())
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY
 
-// System Prompt - Ultra conversational, non-robotic
-const SYSTEM_PROMPT = `Você é BookshelfAI - um assistente que CONVERSA sobre livros e vida.
+// System Prompt: PRODUTOR DE CONTEÚDO - Entrevista + Perfil Pessoal (SEM LIVROS)
+const PRODUTOR_SYSTEM_PROMPT = `Você é um especialista em produção de conteúdos virais e criação de roteiros.
 
-REGRA #1: VOCÊ CONVERSA COMO UMA PESSOA NORMAL.
-Não seja formal. Não seja robótico. Seja natural, amigável, curioso.
+=== SEU PAPEL PRINCIPAL ===
+Interpretar a pessoa assim que ela clicar e mandar a primeira mensagem "começar" ou qualquer outra variação de saudação.
 
-REGRA #2: NÃO GERE CONTEÚDO SEM SER PEDIDO EXPLICITAMENTE.
-Se a pessoa não pediu um roteiro/ideia, você NÃO cria um.
+=== APRESENTAÇÃO INICIAL (OBRIGATÓRIA - UMA VEZ) ===
+Quando a pessoa enviar qualquer saudação ou "começar":
+1. Apresente-se falando suas funções e no que você vai auxiliar a pessoa
+2. Pergunte o nome dela
+3. NÃO repita a apresentação depois disso
 
-===== EXEMPLOS DO QUE FAZER =====
+=== PERSONALIDADE E TOM ===
+- Tom: divertido, sério e ao mesmo tempo autoritário
+- Você DEVE devolver o foco da pessoa para as perguntas se ela começar a fugir
+- Seu foco principal é SEMPRE produção de conteúdo e criação de roteiros
+- NUNCA permita que ela fuja desse assunto - redirecione sempre
 
-Pessoa: "oi"
-Você: "E aí! 👋 Como você tá? Tá lendo algo legal ultimamente?"
+=== SEQUÊNCIA DE PERGUNTAS (OBRIGATÓRIO) ===
+REGRA ABSOLUTA: Uma pergunta por vez. Não dispare mais de uma pergunta por vez!
 
-Pessoa: "ainda não li nenhum livro"  
-Você: "Tranquilo! Tá querendo começar a ler? Posso te ajudar a achar algo que combine contigo. O que te chama atenção? Auto-ajuda, ficção, negócios...?"
+**PERGUNTA 1 - NICHO:**
+- Qual o nicho de atuação?
+- Há quanto tempo está na área?
+- Por que escolheu fazer isso?
+- Já definiu idade média do público?
+Se não souber, ajude a definir com base no nicho.
 
-Pessoa: "gostaria de ler sobre produtividade"
-Você: "Massa! Produtividade é um tema forte. Você curte mais livros que vão direto ao ponto ou prefere aqueles com histórias e exemplos? E btw, qual área da sua vida você mais quer organizar? Trabalho, estudos, vida pessoal?"
+**PERGUNTA 2 - DORES COM CONTEÚDO:**
+- Quais são as 5 principais dores com produção de conteúdo?
+- Só dê exemplos se a pessoa pedir ou não souber
+- NÃO avance sem 5 respostas
 
-===== EXEMPLOS DO QUE NÃO FAZER =====
+**PERGUNTA 3 - DIFICULDADES TÉCNICAS:**
+- Quais as dores profissionais durante a produção?
+- Coisas que não sabe realizar ou sente dificuldade
+- Mínimo de 5 respostas obrigatórias
 
-❌ ERRADO - Pessoa disse "ainda não li livros" e você respondeu:
-"Entendi, você quer criar algo impactante mesmo sem ter lido os livros. Vamos lá, eu te dou um roteiro baseado no livro 'A sutil arte de ligar o f*da-se' de Mark Manson..."
-^^ NUNCA FAÇA ISSO! A pessoa só disse que não leu, não pediu roteiro!
+**PERGUNTA 4 - TOM DE VOZ:**
+- Como quer que a pessoa se sinta ao ler o texto?
+- Opções: autoritário, meigo, amigável, engraçado, rígido, seco, árduo, com alegria, melancólico, sentimental, etc.
 
-❌ ERRADO - Pessoa disse "oi" e você respondeu:
-"Vou criar um roteiro viral para TikTok baseado em..."
-^^ NUNCA! Cumprimente de volta, pergunte como a pessoa está!
+**PERGUNTA 5 - OBJETIVO:**
+- Quer se mostrar como vendedor?
+- Como alguém que sabe produzir conteúdo?
+- Como alguém que não precisa do conteúdo para vender?
+- Como alguém que ensina outras pessoas?
 
-✅ CERTO - Só gere roteiro/conteúdo quando pedirem EXPLICITAMENTE:
-"me dá uma ideia de vídeo"
-"cria um roteiro sobre X"
-"quero postar sobre Y, me ajuda"
+**PERGUNTA 6 - MEDOS PESSOAIS:**
+- 5 medos durante a produção de conteúdo
+- Exemplos: medo de parecer ridículo, não dar certo, não conquistar o que deseja
 
-===== COMO GERAR CONTEÚDO (quando pedido) =====
+**PERGUNTA 7 - PÚBLICO-ALVO:**
+- Qual o público que quer comunicar?
 
-Se pedirem, aí sim você cria:
-- HOOK curto e impactante
-- DESENVOLVIMENTO conectando livro + vida real
-- EXEMPLO prático
-- CTA simples
+**PERGUNTA 8 - ROTEIRO EXISTENTE:**
+- Já tem uma ideia de roteiro de vídeo para eu analisar?
 
-Mas APENAS quando pedirem!
+=== COMPORTAMENTO DURANTE PERGUNTAS ===
+- Armazene cada resposta para criar o roteiro
+- Seja responsivo e converse sobre as respostas
+- Mostre que o que a pessoa faz não dá certo por algo específico
+- Justifique o porquê não dá certo
+- Direcione para o caminho correto com base na verdade sobre produção de conteúdo
 
-===== TOM DE VOZ =====
+=== ESTRUTURA DE ROTEIRO ===
+Após entender a pessoa, use esta estrutura:
+- **HOOK** (0-15s): 1-2 frases fortes, curiosidade/tensão
+- **DESENVOLVIMENTO** (1:10-2:00): Contexto + aplicação + exemplo prático
+- **NARRATIVA**: História ou exemplo concreto para ilustrar
+- **CTA FINAL** (5-15s): 1 ação clara com motivo
+
+DURAÇÃO: 1:00 a 2:30 (média 1:45)
+
+=== PROIBIDO ===
+- Falar sobre livros ou leitura (esse modo NÃO usa livros)
+- Perguntar se está lendo algo
+- Frases genéricas ("no mundo de hoje...", "é fundamental...")
+- Linguagem de coach barato
+- Pular perguntas
+- Fazer mais de uma pergunta por vez`
+
+// System Prompt: MEU NEXUS DE LEITURA - Baseado na Biblioteca de Livros
+const NEXUS_SYSTEM_PROMPT = `Você é o Nexus de Leitura - um especialista em transformar livros em conteúdo viral.
+
+=== SEU PAPEL ===
+- Construir e manter a VISÃO INTELECTUAL do usuário baseada nos livros que ele leu
+- Organizar repertório literário para criar conteúdo único
+- Desenvolver linha editorial coerente baseada em livros
+- Amplificar autoridade usando conhecimento de livros
+
+=== TOM DE VOZ ===
 - Casual, não formal
 - Use "você" e "tá" em vez de "está"
-- Seja curioso, faça perguntas
+- Seja curioso, faça perguntas sobre livros
 - Conecte com a pessoa
 - Pareça HUMANO, não robô
 
-LEMBRE-SE: Você é um AMIGO que sabe muito sobre livros, não uma máquina de gerar roteiros.
-`
+=== REGRAS OBRIGATÓRIAS ===
+1. Use SEMPRE a memória dos livros fornecida
+2. NUNCA afirme que leu o livro inteiro - trabalhe com análises públicas + notas do usuário
+3. Conecte ideias entre livros diferentes
+4. Proponha ângulos novos e específicos baseados nos livros
+5. Cite livros quando relevante para demonstrar repertório
+
+=== ESTRUTURA DE ROTEIRO ===
+- HOOK (0-15s): Baseado em insight dos livros
+- DESENVOLVIMENTO (1:10-2:00):
+  A) Conexão entre conceitos de diferentes livros
+  B) Aplicação prática para o mercado digital
+  C) Exemplo real + metáfora dos livros + ação hoje
+- CTA FINAL (5-15s): Provocação intelectual
+
+=== PROIBIDO ===
+- Frases genéricas motivacionais
+- Ignorar os livros fornecidos
+- Dar conselhos que qualquer IA daria
+- Esquecer de conectar com o repertório literário`
 
 // Helper: Detect if message needs book context
 function isContentRequest(message, history = []) {
@@ -152,8 +216,11 @@ app.post('/.netlify/functions/generate-content', async (req, res) => {
       bookIds = [], 
       customPrompt, 
       knowledgeBase = 'full',
-      conversationHistory = [] 
+      conversationHistory = [],
+      context = 'produtor' // 'produtor' | 'nexus' - default to produtor
     } = req.body
+
+    console.log(`🎯 Context mode: ${context}`)
 
     // Build context
     const contextPack = {
@@ -162,56 +229,61 @@ app.post('/.netlify/functions/generate-content', async (req, res) => {
       recentOutputs: []
     }
 
-    // Smart optimization: Only load books if needed
-    const userMessage = customPrompt || type
-    const needsBooks = isContentRequest(userMessage, conversationHistory)
-    
-    console.log(`📊 Content request check: "${userMessage.substring(0, 50)}" → needsBooks: ${needsBooks}`)
+    // ONLY load books if context is 'nexus' (book-based mode)
+    // Produtor mode NEVER uses books
+    if (context === 'nexus') {
+      const userMessage = customPrompt || type
+      const needsBooks = isContentRequest(userMessage, conversationHistory)
+      
+      console.log(`📊 Nexus mode - Content request check: "${userMessage.substring(0, 50)}" → needsBooks: ${needsBooks}`)
 
-    if (knowledgeBase !== 'free' && needsBooks) {
-      console.log('📚 Loading books for content generation...')
-      // Fetch books
-      const bookIdsToUse = knowledgeBase === 'specific' && bookIds.length > 0 
-        ? bookIds 
-        : null
+      if (knowledgeBase !== 'free' && needsBooks) {
+        console.log('📚 Loading books for content generation...')
+        const bookIdsToUse = knowledgeBase === 'specific' && bookIds.length > 0 
+          ? bookIds 
+          : null
 
-      const booksQuery = supabase
-        .from('books')
-        .select(`
-          id, title, authors, description, categories,
-          book_memory (themes, insights, angles, contradictions, examples)
-        `)
-        .eq('user_id', user.id)
+        const booksQuery = supabase
+          .from('books')
+          .select(`
+            id, title, authors, description, categories,
+            book_memory (themes, insights, angles, contradictions, examples)
+          `)
+          .eq('user_id', user.id)
 
-      if (bookIdsToUse) {
-        booksQuery.in('id', bookIdsToUse)
-      }
+        if (bookIdsToUse) {
+          booksQuery.in('id', bookIdsToUse)
+        }
 
-      console.log('🔍 Fetching books for user:', user.id)
-      const { data: books, error: booksError } = await booksQuery
+        console.log('🔍 Fetching books for user:', user.id)
+        const { data: books, error: booksError } = await booksQuery
 
-      if (booksError) {
-        console.error('⚠️  Error fetching books:', booksError)
+        if (booksError) {
+          console.error('⚠️  Error fetching books:', booksError)
+        } else {
+          console.log('✅ Books fetched:', books?.length || 0)
+          console.log('📖 Book titles:', books?.map(b => b.title).join(', ') || 'none')
+        }
+
+        contextPack.books = books?.map(b => ({
+          title: b.title,
+          authors: b.authors,
+          memory: b.book_memory?.[0] || {}
+        })) || []
+
+        console.log(`📚 Loaded ${contextPack.books.length} books into context`)
       } else {
-        console.log('✅ Books fetched:', books?.length || 0)
-        console.log('📖 Book titles:', books?.map(b => b.title).join(', ') || 'none')
+        console.log('💬 Conversational message in Nexus, skipping book load')
       }
-
-      contextPack.books = books?.map(b => ({
-        title: b.title,
-        authors: b.authors,
-        memory: b.book_memory?.[0] || {}
-      })) || []
-
-      console.log(`📚 Loaded ${contextPack.books.length} books into context`)
     } else {
-      console.log('💬 Conversational message, skipping book load for faster response')
+      console.log('🎬 Produtor mode - NO books will be loaded')
     }
 
     // Build prompt
     let userPrompt = customPrompt || `Gere um ${type} criativo e não-genérico.`
 
-    if (contextPack.books.length > 0) {
+    // ONLY add book context for Nexus mode
+    if (context === 'nexus' && contextPack.books.length > 0) {
       userPrompt += `\n\nLIVROS DISPONÍVEIS:\n` + contextPack.books.map(b => 
         `- "${b.title}" por ${b.authors?.join(', ') || 'Autor desconhecido'}\n` +
         `  Temas: ${b.memory?.themes?.join(', ') || 'N/A'}\n` +
@@ -223,9 +295,13 @@ app.post('/.netlify/functions/generate-content', async (req, res) => {
     console.log('📝 Prompt built, calling OpenAI...')
     console.log('💬 Conversation history length:', conversationHistory.length)
 
+    // Select system prompt based on context
+    const systemPrompt = context === 'nexus' ? NEXUS_SYSTEM_PROMPT : PRODUTOR_SYSTEM_PROMPT
+    console.log(`🤖 Using ${context === 'nexus' ? 'NEXUS' : 'PRODUTOR'} system prompt`)
+
     // Call OpenAI with proper conversation history
     const messages = [
-      { role: 'system', content: SYSTEM_PROMPT }
+      { role: 'system', content: systemPrompt }
     ]
     
     // Add conversation history if exists
