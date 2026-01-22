@@ -187,7 +187,7 @@ export default function LandingPage({ onLogin, onSignup }) {
               margin: '0 auto 48px',
               textShadow: '0 2px 8px rgba(0, 0, 0, 0.6)'
             }}>
-              Resumos inteligentes, roteiros personalizados e análises profundas dos seus livros favoritos
+              Um sistema inteligente para gestão de conhecimento, geração de roteiros e análises aplicadas a livros, ideias e conteúdos.
             </p>
 
             {/* CTA Button - Only Primary */}

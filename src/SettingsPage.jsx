@@ -74,7 +74,7 @@ export default function SettingsPage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Não autenticado')
 
-      const res = await fetch('/.netlify/functions/generate-content', {
+      const res = await fetch('/api/generate-content', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

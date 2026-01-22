@@ -296,7 +296,7 @@ Formato de resposta (JSON):
 }
       `
 
-      const response = await fetch('/.netlify/functions/generate-content', {
+      const response = await fetch('/api/generate-content', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
