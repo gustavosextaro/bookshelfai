@@ -1,6 +1,47 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from './supabaseClient'
-import { Library, BookOpen, Trash2, Brain, FileText } from 'lucide-react'
+import { Library, BookOpen, Trash2, Brain, FileText, Lock } from 'lucide-react'
+
+// Default books that appear for ALL users and cannot be removed
+// These are base books for AI content generation
+const DEFAULT_BOOKS = [
+  {
+    id: 'default-1',
+    title: 'This Is Marketing',
+    authors: ['Seth Godin'],
+    description: 'Marketing is all around us. It\'s not about hype or hustle. It\'s about solving problems and serving others.',
+    cover_url: 'https://covers.openlibrary.org/b/isbn/9780525540830-L.jpg',
+    categories: ['Marketing', 'Business'],
+    isDefault: true
+  },
+  {
+    id: 'default-2',
+    title: 'Influence: The Psychology of Persuasion',
+    authors: ['Robert Cialdini'],
+    description: 'The classic book on persuasion, explains the psychology of why people say "yes" and how to apply these understandings.',
+    cover_url: 'https://covers.openlibrary.org/b/isbn/9780061241895-L.jpg',
+    categories: ['Psychology', 'Business'],
+    isDefault: true
+  },
+  {
+    id: 'default-3',
+    title: '$100M Offers',
+    authors: ['Alex Hormozi'],
+    description: 'How to make offers so good people feel stupid saying no. The playbook for creating Grand Slam Offers.',
+    cover_url: '/100m-offers-cover.png',
+    categories: ['Business', 'Sales', 'Marketing'],
+    isDefault: true
+  },
+  {
+    id: 'default-4',
+    title: 'The Art of SEO',
+    authors: ['Eric Enge', 'Stephan Spencer', 'Jessie Stricchiola'],
+    description: 'Mastering Search Engine Optimization. The comprehensive guide to the constantly changing world of SEO.',
+    cover_url: 'https://covers.openlibrary.org/b/isbn/9781491948965-L.jpg',
+    categories: ['SEO', 'Digital Marketing'],
+    isDefault: true
+  }
+]
 
 async function fetchBookFromGoogle(title) {
   const cleanTitle = title.trim()
@@ -467,13 +508,19 @@ export default function LibraryPage() {
   }
 
   return (
-    <div style={{ padding: '30px' }}>
+    <div style={{ 
+      padding: '30px', 
+      height: '100%', 
+      display: 'flex', 
+      flexDirection: 'column',
+      overflow: 'hidden'
+    }}>
       <div style={{ marginBottom: '30px' }}>
         <div style={{ fontSize: '24px', fontWeight: '700', marginBottom: '8px' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Library size={24} /> Minha Biblioteca</span>
         </div>
         <div className="muted" style={{ fontSize: '14px' }}>
-          {books.length} {books.length === 1 ? 'livro' : 'livros'} na sua estante
+          {books.length + DEFAULT_BOOKS.length} {(books.length + DEFAULT_BOOKS.length) === 1 ? 'livro' : 'livros'} na sua estante
         </div>
 
         {/* Search Hint */}
@@ -602,9 +649,71 @@ export default function LibraryPage() {
           </button>
         </form>
       </div>
+      {/* Scrollable Books Container */}
+      <div style={{ 
+        flex: 1, 
+        overflowY: 'auto', 
+        overflowX: 'hidden',
+        paddingRight: '8px',
+        marginRight: '-8px'
+      }}>
+        {/* Books Grid - Default books first, then user books */}
+        <div className="grid">
+        {/* Default Books Section */}
+        <div style={{ gridColumn: '1 / -1', marginBottom: '12px' }}>
+          <div style={{ fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.7)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Lock size={14} /> Livros Base (Obrigatórios para IA)
+          </div>
+        </div>
+        {DEFAULT_BOOKS.map(book => (
+          <div key={book.id} className="card bookCard" onClick={() => openBookModal(book)} style={{ position: 'relative' }}>
+            {/* Lock Badge */}
+            <div style={{
+              position: 'absolute',
+              top: '8px',
+              right: '8px',
+              background: 'rgba(99, 102, 241, 0.9)',
+              borderRadius: '50%',
+              width: '24px',
+              height: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10
+            }}>
+              <Lock size={12} color="#fff" />
+            </div>
+            <div className="coverWrap">
+              {book.cover_url ? (
+                <img className="cover" src={book.cover_url} alt={book.title} loading="lazy" />
+              ) : (
+                <div className="coverFallback">
+                  <div style={{ fontWeight: 700, fontSize: 11 }}>Sem capa</div>
+                </div>
+              )}
+            </div>
+            <div className="bookMeta">
+              <h3 className="bookTitle">{book.title}</h3>
+              {book.authors?.length > 0 && (
+                <div className="muted" style={{ fontSize: 11 }}>{book.authors.join(', ')}</div>
+              )}
+              <div style={{ marginTop: '8px' }}>
+                <span className="badge" style={{ background: 'rgba(99, 102, 241, 0.2)', color: '#818cf8', fontSize: '10px' }}>
+                  📚 Livro Base
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
 
-      {/* Books Grid */}
-      <div className="grid">
+        {/* User Books Section */}
+        {books.length > 0 && (
+          <div style={{ gridColumn: '1 / -1', marginTop: '20px', marginBottom: '12px' }}>
+            <div style={{ fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.7)', marginBottom: '12px' }}>
+              📖 Seus Livros ({books.length})
+            </div>
+          </div>
+        )}
         {books.map(book => (
           <div key={book.id} className="card bookCard" onClick={() => openBookModal(book)}>
             <div className="coverWrap">
@@ -634,17 +743,10 @@ export default function LibraryPage() {
             </div>
           </div>
         ))}
+        </div>
       </div>
 
-      {books.length === 0 && (
-        <div className="card" style={{ padding: '60px 40px', textAlign: 'center' }}>
-          <Library size={48} style={{ color: 'var(--muted)' }} />
-          <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>
-            Sua biblioteca está vazia
-          </div>
-          <div className="muted">Adicione seu primeiro livro acima para começar!</div>
-        </div>
-      )}
+      {/* Removed empty library message since we always have DEFAULT_BOOKS */}
 
       {/* Book Modal */}
       <Modal open={!!selectedBook} onClose={() => setSelectedBook(null)}>
@@ -717,16 +819,37 @@ export default function LibraryPage() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button className="btn btnPrimary" onClick={handleSaveNotes} disabled={savingNotes}>
-                {savingNotes ? 'Salvando...' : '💾 Salvar Notas'}
-              </button>
-              <button className="btn" onClick={() => buildBookMemory(selectedBook.id)}>
-                <Brain size={16} style={{ display: 'inline', marginRight: 4 }} /> Reconstruir Memória
-              </button>
-              <button className="btn" onClick={() => handleDelete(selectedBook.id)} style={{ marginLeft: 'auto', color: 'var(--danger)' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Trash2 size={16} /> Excluir</span>
-              </button>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              {/* Only show these buttons for user books, not default books */}
+              {!selectedBook.isDefault && (
+                <>
+                  <button className="btn btnPrimary" onClick={handleSaveNotes} disabled={savingNotes}>
+                    {savingNotes ? 'Salvando...' : '💾 Salvar Notas'}
+                  </button>
+                  <button className="btn" onClick={() => buildBookMemory(selectedBook.id)}>
+                    <Brain size={16} style={{ display: 'inline', marginRight: 4 }} /> Reconstruir Memória
+                  </button>
+                  <button className="btn" onClick={() => handleDelete(selectedBook.id)} style={{ marginLeft: 'auto', color: 'var(--danger)' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Trash2 size={16} /> Excluir</span>
+                  </button>
+                </>
+              )}
+              {selectedBook.isDefault && (
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px', 
+                  padding: '12px 16px',
+                  background: 'rgba(99, 102, 241, 0.15)',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  color: '#818cf8',
+                  width: '100%'
+                }}>
+                  <Lock size={16} />
+                  Este é um livro base obrigatório para a IA e não pode ser removido.
+                </div>
+              )}
             </div>
           </div>
         )}

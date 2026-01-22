@@ -91,6 +91,13 @@ a { color: inherit; text-decoration: none; }
   padding: 22px;
 }
 
+.main-content {
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 .card {
   background: var(--panel);
   border: 1px solid var(--border);

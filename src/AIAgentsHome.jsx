@@ -1,13 +1,49 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabaseClient'
 import BrainCanvas from './components/BrainCanvas'
-import { Eraser, BookOpen, History, Mic, Circle, Clock, X, Bot, User, Video, Lightbulb, FileText, FlipVertical } from 'lucide-react'
+import { Eraser, BookOpen, History, Mic, Circle, Clock, X, Bot, User, Video, Lightbulb, FileText, FlipVertical, Crown, Lock } from 'lucide-react'
 
 // Initialize username from localStorage immediately to prevent flash
 const getInitialUsername = () => {
   const saved = localStorage.getItem('bookshelfai.username')
   return saved || 'Usuário'
 }
+
+// Default books that are always available for AI context in Nexus mode
+const DEFAULT_BOOKS = [
+  {
+    id: 'default-1',
+    title: 'This Is Marketing',
+    authors: ['Seth Godin'],
+    description: 'Marketing is all around us. It\'s not about hype or hustle. It\'s about solving problems and serving others.',
+    categories: ['Marketing', 'Business'],
+    isDefault: true
+  },
+  {
+    id: 'default-2',
+    title: 'Influence: The Psychology of Persuasion',
+    authors: ['Robert Cialdini'],
+    description: 'The classic book on persuasion, explains the psychology of why people say "yes" and how to apply these understandings.',
+    categories: ['Psychology', 'Business'],
+    isDefault: true
+  },
+  {
+    id: 'default-3',
+    title: '$100M Offers',
+    authors: ['Alex Hormozi'],
+    description: 'How to make offers so good people feel stupid saying no. The playbook for creating Grand Slam Offers.',
+    categories: ['Business', 'Sales', 'Marketing'],
+    isDefault: true
+  },
+  {
+    id: 'default-4',
+    title: 'The Art of SEO',
+    authors: ['Eric Enge', 'Stephan Spencer', 'Jessie Stricchiola'],
+    description: 'Mastering Search Engine Optimization. The comprehensive guide to the constantly changing world of SEO.',
+    categories: ['SEO', 'Digital Marketing'],
+    isDefault: true
+  }
+]
 
 // Extracted Component to fix focus loss issues
 const ChatInputSection = ({
@@ -254,6 +290,11 @@ export default function AIAgentsHome() {
   const [showHistory, setShowHistory] = useState(false)
   const [conversationHistory, setConversationHistory] = useState([])
   
+  // Conversation persistence
+  const [savedConversations, setSavedConversations] = useState([])
+  const [activeConversationId, setActiveConversationId] = useState(null)
+  const [loadingConversations, setLoadingConversations] = useState(true)
+  
   // Credit system states
   const [userCredits, setUserCredits] = useState(null)
   const [userTier, setUserTier] = useState('free')
@@ -371,9 +412,9 @@ export default function AIAgentsHome() {
       .select('*, book_memory(*)')
       .eq('user_id', currentUser.id)
       
-    if (booksData) {
-      setBooks(booksData)
-    }
+    // Merge default books with user books so Nexus mode always has the base knowledge
+    const allBooks = [...DEFAULT_BOOKS, ...(booksData || [])]
+    setBooks(allBooks)
 
     const { data: outputs } = await supabase
       .from('ai_outputs')
@@ -405,6 +446,120 @@ export default function AIAgentsHome() {
     if (profileData) {
       setUserCredits(profileData.ai_credits_remaining)
       setUserTier(profileData.subscription_tier || 'free')
+    }
+
+    // Load conversations list
+    await loadConversations(currentUser.id)
+  }
+
+  // Load all conversations for the user
+  async function loadConversations(userId) {
+    setLoadingConversations(true)
+    try {
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('id, title, context, created_at, updated_at')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(50)
+
+      if (error) throw error
+      setSavedConversations(data || [])
+    } catch (error) {
+      console.error('Error loading conversations:', error)
+    } finally {
+      setLoadingConversations(false)
+    }
+  }
+
+  // Create a new conversation
+  async function createConversation(firstMessage) {
+    if (!user) return null
+
+    try {
+      // Generate title from first message (first 50 chars)
+      const title = firstMessage.length > 50 
+        ? firstMessage.substring(0, 50) + '...' 
+        : firstMessage
+
+      const { data, error } = await supabase
+        .from('conversations')
+        .insert({
+          user_id: user.id,
+          title,
+          context: activeContext
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+      
+      setActiveConversationId(data.id)
+      setSavedConversations(prev => [data, ...prev])
+      return data.id
+    } catch (error) {
+      console.error('Error creating conversation:', error)
+      return null
+    }
+  }
+
+  // Load a specific conversation
+  async function loadConversation(conversationId) {
+    try {
+      console.log('📂 Loading conversation:', conversationId)
+      
+      const { data: messages, error } = await supabase
+        .from('messages')
+        .select('role, content, created_at')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true })
+
+      if (error) throw error
+
+      console.log('📨 Loaded messages:', messages?.length || 0)
+
+      // Convert to our format
+      const history = messages?.map(m => ({
+        type: m.role === 'user' ? 'user' : 'ai',
+        content: m.content,
+        timestamp: m.created_at
+      })) || []
+
+      console.log('📜 Converted history:', history)
+
+      setConversationHistory(history)
+      setActiveConversationId(conversationId)
+      setShowHistory(false)
+      
+      // Trigger output display if there are AI messages
+      const lastAiMessage = history.filter(m => m.type === 'ai').slice(-1)[0]
+      if (lastAiMessage) {
+        setOutput({ result: lastAiMessage.content })
+        setShowOutput(true)
+      }
+      
+      // Load conversation context
+      const conv = savedConversations.find(c => c.id === conversationId)
+      if (conv?.context) {
+        setActiveContext(conv.context)
+      }
+    } catch (error) {
+      console.error('❌ Error loading conversation:', error)
+    }
+  }
+
+  // Save a message to the database
+  async function saveMessage(conversationId, role, content) {
+    try {
+      await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          role,
+          content
+        })
+    } catch (error) {
+      console.error('Error saving message:', error)
     }
   }
 
@@ -438,6 +593,17 @@ export default function AIAgentsHome() {
     setShowOutput(false) // Reset fade state
     setOutput(null)
     if (!customPrompt) setMessage('')
+
+    // Determine conversation ID - create new one if needed
+    let conversationId = activeConversationId
+    if (!conversationId) {
+      conversationId = await createConversation(customPrompt || message.trim())
+    }
+
+    // Save user message to DB
+    if (conversationId) {
+      await saveMessage(conversationId, 'user', customPrompt || message.trim())
+    }
 
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -476,6 +642,11 @@ export default function AIAgentsHome() {
         timestamp: new Date().toISOString() 
       }
       setConversationHistory(prev => [...prev, aiMessage])
+
+      // Save AI message to DB
+      if (conversationId) {
+        await saveMessage(conversationId, 'assistant', data.result)
+      }
       
       // First hide loading, then show output with smooth transition
       setLoading(false)
@@ -569,6 +740,7 @@ export default function AIAgentsHome() {
         setConversationHistory([])
         setOutput(null)
         setMessage('')
+        setActiveConversationId(null) // Reset for new conversation
       }
     }
   }
@@ -924,10 +1096,6 @@ export default function AIAgentsHome() {
                   </div>
                   <div style={styles.statDivider}></div>
                   <div style={styles.statItem}>
-                    <span style={styles.statText}>{brainStats.scriptsCount} roteiros</span>
-                  </div>
-                  <div style={styles.statDivider}></div>
-                  <div style={styles.statItem}>
                     <span style={styles.statText}>{brainStats.insightsCount} insights novos</span>
                   </div>
                 </div>
@@ -944,44 +1112,82 @@ export default function AIAgentsHome() {
               }}>
                 {/* Produtor de Conteúdo Card */}
                 <button
-                  onClick={() => setActiveContext('produtor')}
+                  onClick={() => {
+                    if (userTier === 'free') {
+                      // Redirect to pricing page
+                      window.location.hash = '#planos'
+                      window.dispatchEvent(new CustomEvent('navigate', { detail: 'planos' }))
+                    } else {
+                      setActiveContext('produtor')
+                    }
+                  }}
                   style={{
                     flex: 1,
                     padding: '1.25rem',
                     borderRadius: '1rem',
-                    border: activeContext === 'produtor' 
-                      ? '2px solid #6366f1' 
-                      : '1px solid rgba(255, 255, 255, 0.1)',
-                    background: activeContext === 'produtor' 
-                      ? 'rgba(99, 102, 241, 0.15)' 
-                      : 'rgba(24, 24, 27, 0.6)',
+                    border: userTier === 'free' 
+                      ? '1px solid rgba(212, 180, 131, 0.3)' 
+                      : activeContext === 'produtor' 
+                        ? '2px solid #6366f1' 
+                        : '1px solid rgba(255, 255, 255, 0.1)',
+                    background: userTier === 'free'
+                      ? 'rgba(212, 180, 131, 0.05)'
+                      : activeContext === 'produtor' 
+                        ? 'rgba(99, 102, 241, 0.15)' 
+                        : 'rgba(24, 24, 27, 0.6)',
                     cursor: 'pointer',
                     textAlign: 'left',
                     transition: 'all 0.2s',
                     backdropFilter: 'blur(12px)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '0.75rem'
+                    gap: '0.75rem',
+                    position: 'relative',
+                    opacity: userTier === 'free' ? 0.85 : 1
                   }}
                 >
+                  {/* PRO Badge for free users */}
+                  {userTier === 'free' && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-8px',
+                      right: '-8px',
+                      background: 'linear-gradient(135deg, #d4b483, #a67c52)',
+                      color: '#1a1a1a',
+                      padding: '4px 10px',
+                      borderRadius: '9999px',
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      boxShadow: '0 2px 8px rgba(212, 180, 131, 0.4)'
+                    }}>
+                      <Crown size={12} /> PRO
+                    </div>
+                  )}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <div style={{
                       width: '40px',
                       height: '40px',
                       borderRadius: '0.75rem',
-                      background: 'rgba(99, 102, 241, 0.2)',
+                      background: userTier === 'free' ? 'rgba(212, 180, 131, 0.2)' : 'rgba(99, 102, 241, 0.2)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center'
                     }}>
-                      <Bot size={22} color="#818cf8" />
+                      {userTier === 'free' ? (
+                        <Lock size={22} color="#d4b483" />
+                      ) : (
+                        <Bot size={22} color="#818cf8" />
+                      )}
                     </div>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: '1rem', color: '#f1f5f9' }}>
+                      <div style={{ fontWeight: 700, fontSize: '1rem', color: '#f1f5f9', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         Produtor de Conteúdo
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                        Entrevista personalizada
+                      <div style={{ fontSize: '0.75rem', color: userTier === 'free' ? '#d4b483' : '#94a3b8' }}>
+                        {userTier === 'free' ? 'Disponível nos planos pagos' : 'Entrevista personalizada'}
                       </div>
                     </div>
                   </div>
@@ -991,8 +1197,9 @@ export default function AIAgentsHome() {
                     margin: 0,
                     lineHeight: 1.5
                   }}>
-                    O agente vai te conhecer através de perguntas sobre seu nicho, 
-                    dores, objetivos e estilo para criar roteiros 100% personalizados.
+                    {userTier === 'free' 
+                      ? 'Assine um plano para desbloquear o Produtor de Conteúdo e criar roteiros personalizados.'
+                      : 'O agente vai te conhecer através de perguntas sobre seu nicho, dores, objetivos e estilo para criar roteiros 100% personalizados.'}
                   </p>
                 </button>
 
@@ -1447,6 +1654,173 @@ export default function AIAgentsHome() {
                 }}
               >
                 Ver Planos
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Conversation History Modal */}
+      {showHistory && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.85)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px',
+          backdropFilter: 'blur(8px)'
+        }} onClick={() => setShowHistory(false)}>
+          <div style={{
+            background: 'linear-gradient(180deg, #1a1f2e, #13171f)',
+            borderRadius: '20px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            width: '100%',
+            maxWidth: '600px',
+            maxHeight: '80vh',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)'
+          }} onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{
+              padding: '20px 24px',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <History size={20} style={{ color: '#6366f1' }} />
+                <span style={{ fontSize: '18px', fontWeight: '600' }}>Histórico de Conversas</span>
+              </div>
+              <button 
+                onClick={() => setShowHistory(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  fontSize: '24px',
+                  padding: '4px'
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Conversation List */}
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '12px'
+            }}>
+              {loadingConversations ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                  Carregando conversas...
+                </div>
+              ) : savedConversations.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                  <Clock size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
+                  <div>Nenhuma conversa salva ainda</div>
+                  <div style={{ fontSize: '13px', marginTop: '8px' }}>
+                    Suas conversas aparecerão aqui automaticamente
+                  </div>
+                </div>
+              ) : (
+                savedConversations.map(conv => (
+                  <button
+                    key={conv.id}
+                    onClick={() => loadConversation(conv.id)}
+                    style={{
+                      width: '100%',
+                      padding: '16px',
+                      background: activeConversationId === conv.id 
+                        ? 'rgba(99, 102, 241, 0.15)' 
+                        : 'rgba(255, 255, 255, 0.03)',
+                      border: activeConversationId === conv.id 
+                        ? '1px solid rgba(99, 102, 241, 0.3)' 
+                        : '1px solid rgba(255, 255, 255, 0.05)',
+                      borderRadius: '12px',
+                      marginBottom: '8px',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.2s',
+                      display: 'block'
+                    }}
+                  >
+                    <div style={{ 
+                      fontSize: '14px', 
+                      fontWeight: '500', 
+                      color: '#e2e8f0',
+                      marginBottom: '6px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {conv.title || 'Conversa sem título'}
+                    </div>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '12px',
+                      fontSize: '12px',
+                      color: '#64748b'
+                    }}>
+                      <span style={{
+                        padding: '2px 8px',
+                        background: conv.context === 'nexus' 
+                          ? 'rgba(212, 180, 131, 0.1)' 
+                          : 'rgba(99, 102, 241, 0.1)',
+                        color: conv.context === 'nexus' ? '#d4b483' : '#818cf8',
+                        borderRadius: '4px',
+                        fontSize: '10px',
+                        fontWeight: '500'
+                      }}>
+                        {conv.context === 'nexus' ? 'Nexus' : 'Produtor'}
+                      </span>
+                      <span>
+                        {new Date(conv.updated_at).toLocaleDateString('pt-BR', {
+                          day: '2-digit',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '16px 24px',
+              borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span style={{ fontSize: '12px', color: '#64748b' }}>
+                {savedConversations.length} conversa{savedConversations.length !== 1 ? 's' : ''}
+              </span>
+              <button
+                className="btn btnPrimary"
+                onClick={() => {
+                  setConversationHistory([])
+                  setActiveConversationId(null)
+                  setOutput(null)
+                  setShowHistory(false)
+                }}
+                style={{ fontSize: '13px', padding: '8px 16px' }}
+              >
+                + Nova Conversa
               </button>
             </div>
           </div>

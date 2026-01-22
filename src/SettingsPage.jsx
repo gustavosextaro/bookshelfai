@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from './supabaseClient'
-import { Settings, Shield, Users, Activity } from 'lucide-react'
+import { Settings, Shield, Users, Activity, CheckCircle, XCircle, RefreshCw, Crown } from 'lucide-react'
 
 export default function SettingsPage() {
   const [user, setUser] = useState(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  
+  // Admin panel states
+  const [allUsers, setAllUsers] = useState([])
+  const [loadingUsers, setLoadingUsers] = useState(false)
+  const [apiStatus, setApiStatus] = useState({ checking: false, status: null, error: null })
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
@@ -22,10 +27,75 @@ export default function SettingsPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         setUser(user)
-        setIsAdmin(user.email === 'gustavosextaro@gmail.com')
+        const admin = user.email === 'gustavosextaro@gmail.com'
+        setIsAdmin(admin)
+        if (admin) {
+          loadAllUsers()
+          checkApiHealth()
+        }
       }
     } catch (err) {
       console.warn('Failed to check admin status', err)
+    }
+  }
+
+  async function loadAllUsers() {
+    setLoadingUsers(true)
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, username, subscription_tier, ai_credits_remaining, created_at')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      // Get emails from auth (via RPC if available) or use profile data
+      const usersWithInfo = await Promise.all(
+        (data || []).map(async (profile) => {
+          // Try to get user email from auth.users via admin function
+          return {
+            ...profile,
+            email: profile.username || 'Sem email'
+          }
+        })
+      )
+
+      setAllUsers(usersWithInfo)
+    } catch (err) {
+      console.error('Error loading users:', err)
+    } finally {
+      setLoadingUsers(false)
+    }
+  }
+
+  async function checkApiHealth() {
+    setApiStatus({ checking: true, status: null, error: null })
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Não autenticado')
+
+      const res = await fetch('/.netlify/functions/generate-content', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          type: 'chat',
+          customPrompt: 'ping',
+          context: 'produtor',
+          conversationHistory: []
+        })
+      })
+
+      if (res.ok) {
+        setApiStatus({ checking: false, status: 'ok', error: null })
+      } else {
+        const data = await res.json()
+        setApiStatus({ checking: false, status: 'error', error: data.error || 'API Error' })
+      }
+    } catch (err) {
+      setApiStatus({ checking: false, status: 'error', error: err.message })
     }
   }
 
@@ -88,38 +158,133 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)' }}>
-            {/* User Stats Card */}
-            <div style={{
-              padding: '1.5rem',
-              background: 'var(--bg-200)',
-              borderRadius: '12px',
-              border: '1px solid var(--border)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+          {/* API Health Check */}
+          <div style={{
+            padding: '1rem',
+            background: 'var(--bg-200)',
+            borderRadius: '12px',
+            border: '1px solid var(--border)',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Activity size={20} style={{ color: '#a78bfa' }} />
+              <span style={{ fontWeight: '600', color: 'var(--text)' }}>OpenAI API Status</span>
+              {apiStatus.checking ? (
+                <RefreshCw size={16} style={{ color: 'var(--muted)', animation: 'spin 1s linear infinite' }} />
+              ) : apiStatus.status === 'ok' ? (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10b981' }}>
+                  <CheckCircle size={16} /> Funcionando
+                </span>
+              ) : apiStatus.status === 'error' ? (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ef4444' }}>
+                  <XCircle size={16} /> Erro: {apiStatus.error}
+                </span>
+              ) : (
+                <span style={{ color: 'var(--muted)' }}>Não verificado</span>
+              )}
+            </div>
+            <button
+              onClick={checkApiHealth}
+              disabled={apiStatus.checking}
+              style={{
+                padding: '6px 12px',
+                background: 'var(--panel)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                color: 'var(--text)',
+                cursor: 'pointer',
+                fontSize: '12px'
+              }}
+            >
+              {apiStatus.checking ? 'Verificando...' : 'Verificar'}
+            </button>
+          </div>
+
+          {/* Users Table */}
+          <div style={{
+            padding: '1.5rem',
+            background: 'var(--bg-200)',
+            borderRadius: '12px',
+            border: '1px solid var(--border)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <Users size={20} style={{ color: '#a78bfa' }} />
-                <span style={{ fontWeight: '600', color: 'var(--text)' }}>Estatísticas de Usuários</span>
+                <span style={{ fontWeight: '600', color: 'var(--text)' }}>Usuários Registrados ({allUsers.length})</span>
               </div>
-              <div style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>
-                Em desenvolvimento - estatísticas de uso do sistema aparecerão aqui
-              </div>
+              <button
+                onClick={loadAllUsers}
+                disabled={loadingUsers}
+                style={{
+                  padding: '6px 12px',
+                  background: 'var(--panel)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  color: 'var(--text)',
+                  cursor: 'pointer',
+                  fontSize: '12px'
+                }}
+              >
+                {loadingUsers ? 'Carregando...' : 'Atualizar'}
+              </button>
             </div>
 
-            {/* System Activity Card */}
-            <div style={{
-              padding: '1.5rem',
-              background: 'var(--bg-200)',
-              borderRadius: '12px',
-              border: '1px solid var(--border)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                <Activity size={20} style={{ color: '#a78bfa' }} />
-                <span style={{ fontWeight: '600', color: 'var(--text)' }}>Atividade do Sistema</span>
+            {loadingUsers ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)' }}>
+                Carregando usuários...
               </div>
-              <div style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>
-                Monitoramento de API e métricas aparecerão aqui
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                      <th style={{ padding: '10px 8px', textAlign: 'left', color: 'var(--muted)', fontWeight: '500' }}>Username</th>
+                      <th style={{ padding: '10px 8px', textAlign: 'left', color: 'var(--muted)', fontWeight: '500' }}>Plano</th>
+                      <th style={{ padding: '10px 8px', textAlign: 'center', color: 'var(--muted)', fontWeight: '500' }}>Créditos</th>
+                      <th style={{ padding: '10px 8px', textAlign: 'left', color: 'var(--muted)', fontWeight: '500' }}>Cadastro</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allUsers.map((u) => (
+                      <tr key={u.id} style={{ borderBottom: '1px solid var(--border)', opacity: u.subscription_tier === 'enterprise' ? 1 : 0.9 }}>
+                        <td style={{ padding: '12px 8px', color: 'var(--text)' }}>
+                          {u.username || 'Sem nome'}
+                        </td>
+                        <td style={{ padding: '12px 8px' }}>
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '4px 10px',
+                            borderRadius: '9999px',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            background: u.subscription_tier === 'enterprise' ? 'rgba(212, 180, 131, 0.15)' : 
+                                       u.subscription_tier === 'premium' ? 'rgba(99, 102, 241, 0.15)' : 
+                                       'rgba(100, 116, 139, 0.15)',
+                            color: u.subscription_tier === 'enterprise' ? '#d4b483' : 
+                                   u.subscription_tier === 'premium' ? '#818cf8' : 
+                                   '#94a3b8'
+                          }}>
+                            {u.subscription_tier === 'enterprise' && <Crown size={12} />}
+                            {(u.subscription_tier || 'free').toUpperCase()}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 8px', textAlign: 'center', color: 'var(--text)' }}>
+                          {u.subscription_tier === 'enterprise' ? '∞' : (u.ai_credits_remaining ?? 10)}
+                        </td>
+                        <td style={{ padding: '12px 8px', color: 'var(--muted)', fontSize: '12px' }}>
+                          {new Date(u.created_at).toLocaleDateString('pt-BR')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}
@@ -144,6 +309,13 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   )
 }

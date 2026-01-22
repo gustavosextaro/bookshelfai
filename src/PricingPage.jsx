@@ -29,37 +29,41 @@ export default function PricingPage() {
       description: 'Para começar sua jornada de leitura',
       buttonText: 'Começar Grátis',
       href: '#',
+      monthlyHref: '#',
+      yearlyHref: '#',
       isPopular: false,
     },
     {
       name: 'Premium',
       monthlyPrice: 57.00,
-      yearlyPrice: 16.42, // 197 / 12 = 16.42
+      yearlyPrice: 20.02, // valor da parcela com taxas
       yearlyTotal: 197.00,
       period: 'mês',
       features: [
         'Livros ilimitados',
-        'IA avançada para insights',
+        '500 créditos IA mensais',
+        'Produtor de Conteúdo desbloqueado',
         'Geração de roteiros editoriais',
         'Brain visual interativo',
-        'Análise de padrões de leitura',
         'Suporte prioritário',
         'Exportação avançada',
       ],
       description: 'Para leitores ávidos',
       buttonText: 'Assinar Premium',
       href: '#',
+      monthlyHref: 'https://pay.hub.la/2SI6fQaWg0KNtnEHKIQI',
+      yearlyHref: 'https://pay.hub.la/eYhBOW8mv1XlNCT5Pmxx',
       isPopular: true,
     },
     {
       name: 'Enterprise',
       monthlyPrice: 87.00,
-      yearlyPrice: 24.75, // 297 / 12 = 24.75
+      yearlyPrice: 30.18, // valor da parcela com taxas
       yearlyTotal: 297.00,
       period: 'mês',
       features: [
         'Tudo do Premium',
-        'Usuários ilimitados',
+        '1.000 créditos IA mensais',
         'Suporte dedicado 24/7',
         'Treinamento personalizado',
         'SLA garantido',
@@ -68,8 +72,10 @@ export default function PricingPage() {
         'Dashboard analítico',
       ],
       description: 'Para empresas e instituições',
-      buttonText: 'Falar com Vendas',
+      buttonText: 'Assinar Enterprise',
       href: '#',
+      monthlyHref: 'https://pay.hub.la/61euzeBFRfquwm9ko3eU',
+      yearlyHref: 'https://pay.hub.la/otXE08CrBF1rA9ZjC3mm',
       isPopular: false,
     },
   ]
@@ -319,6 +325,12 @@ export default function PricingPage() {
 
               <button
                 className={cn('btn', plan.isPopular && 'btnPrimary')}
+                onClick={() => {
+                  const url = isMonthly ? plan.monthlyHref : plan.yearlyHref
+                  if (url && url !== '#') {
+                    window.open(url, '_blank')
+                  }
+                }}
                 style={{
                   width: '100%',
                   fontSize: '14px',

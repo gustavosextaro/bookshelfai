@@ -158,10 +158,21 @@ function Auth({ onAuthed }) {
       <main className="main" style={{ display: 'grid', placeItems: 'center' }}>
         <div className="card" style={{ width: 'min(520px, 100%)', padding: 16 }}>
           <div className="header" style={{ marginBottom: 10 }}>
-            <div>
-              <div className="h1">BookshelfAI</div>
-              <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
-                Entre para salvar sua biblioteca e usar a IA.
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <img 
+                src="/icon.png" 
+                alt="BookshelfAI" 
+                style={{ 
+                  width: '48px', 
+                  height: '48px', 
+                  objectFit: 'contain' 
+                }} 
+              />
+              <div>
+                <div className="h1">BookshelfAI</div>
+                <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                  Entre para salvar sua biblioteca e usar a IA.
+                </div>
               </div>
             </div>
           </div>

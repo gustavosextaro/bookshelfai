@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from './supabaseClient'
 import { User, Edit, Library, Trash2, BarChart3, Star, Target, Sparkles, BookOpen } from 'lucide-react'
 
+// Number of default books that are always present
+const DEFAULT_BOOKS_COUNT = 4
+
 export default function ProfilePage({ onProfileUpdate }) {
   const [profile, setProfile] = useState(null)
   const [username, setUsername] = useState('')
@@ -128,7 +131,7 @@ export default function ProfilePage({ onProfileUpdate }) {
     const summaries = outputs.filter(o => o.type === 'summary').length || 0
     
     console.log('📊 [ProfilePage] Final stats:', {
-      totalBooks: books?.length || 0,
+      totalBooks: (books?.length || 0) + DEFAULT_BOOKS_COUNT,
       thisYear,
       thisMonth,
       scripts,
@@ -136,7 +139,7 @@ export default function ProfilePage({ onProfileUpdate }) {
     })
 
     setStats({
-      totalBooks: books?.length || 0,
+      totalBooks: (books?.length || 0) + DEFAULT_BOOKS_COUNT,
       thisYear,
       thisMonth,
       scripts,
@@ -473,18 +476,18 @@ Formato de resposta (JSON):
       <div style={{ marginBottom: '24px' }}>
         <div style={{ fontWeight: '700', fontSize: '16px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}><BarChart3 size={16} /> Estatísticas de IA</div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px' }}>
-          <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
-            <div className="muted" style={{ fontSize: '12px', marginBottom: '8px' }}>Livros na Biblioteca</div>
-            <div style={{ fontSize: '32px', fontWeight: '800', color: '#667eea' }}>{stats.totalBooks || 0}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
+          <div className="card" style={{ padding: '16px', textAlign: 'center' }}>
+            <div className="muted" style={{ fontSize: '11px', marginBottom: '6px' }}>Livros na Biblioteca</div>
+            <div style={{ fontSize: '24px', fontWeight: '700', color: '#667eea' }}>{stats.totalBooks || 0}</div>
           </div>
-          <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
-            <div className="muted" style={{ fontSize: '12px', marginBottom: '8px' }}>Roteiros Gerados</div>
-            <div style={{ fontSize: '32px', fontWeight: '800', color: '#a78bfa' }}>{stats.scripts || 0}</div>
+          <div className="card" style={{ padding: '16px', textAlign: 'center' }}>
+            <div className="muted" style={{ fontSize: '11px', marginBottom: '6px' }}>Roteiros Gerados</div>
+            <div style={{ fontSize: '24px', fontWeight: '700', color: '#a78bfa' }}>{stats.scripts || 0}</div>
           </div>
-          <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
-            <div className="muted" style={{ fontSize: '12px', marginBottom: '8px' }}>Resumos Feitos</div>
-            <div style={{ fontSize: '32px', fontWeight: '800', color: '#fbbf24' }}>{stats.summaries || 0}</div>
+          <div className="card" style={{ padding: '16px', textAlign: 'center' }}>
+            <div className="muted" style={{ fontSize: '11px', marginBottom: '6px' }}>Resumos Feitos</div>
+            <div style={{ fontSize: '24px', fontWeight: '700', color: '#fbbf24' }}>{stats.summaries || 0}</div>
           </div>
         </div>
       </div>
