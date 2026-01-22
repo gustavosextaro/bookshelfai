@@ -39,7 +39,15 @@ function Auth({ onAuthed }) {
     setSuccessMsg(null)
     setBusy(true)
     try {
-      if (mode === 'signup') {
+      if (mode === 'forgot') {
+        // Forgot password - send reset email
+        const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/`
+        })
+        if (err) throw err
+        setSuccessMsg(`Enviamos um link de redefinição de senha para ${email}. Verifique sua caixa de entrada!`)
+        setPassword('')
+      } else if (mode === 'signup') {
         const { error: err } = await supabase.auth.signUp({ 
           email, 
           password,
@@ -168,17 +176,52 @@ function Auth({ onAuthed }) {
                   <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>Ex: Gustavo, Maria, João...</div>
                 </div>
               )}
-              <div>
-                <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>Senha</label>
-                <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-              </div>
+              {mode !== 'forgot' && (
+                <div>
+                  <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>Senha</label>
+                  <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                </div>
+              )}
+              {mode === 'forgot' && (
+                <div style={{ 
+                  padding: '12px', 
+                  background: 'rgba(99, 102, 241, 0.1)', 
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  color: 'var(--muted)',
+                  lineHeight: '1.5'
+                }}>
+                  Digite seu email acima e clique em "Enviar" para receber um link de redefinição de senha.
+                </div>
+              )}
               {error ? <div style={{ color: 'var(--danger)', fontSize: 12 }}>{error}</div> : null}
+              
+              {/* Forgot password link - only on signin mode */}
+              {mode === 'signin' && (
+                <button 
+                  type="button" 
+                  onClick={() => setMode('forgot')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--brand)',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    textAlign: 'right',
+                    padding: 0,
+                    marginTop: '-8px'
+                  }}
+                >
+                  Esqueci minha senha
+                </button>
+              )}
+              
               <div className="row" style={{ justifyContent: 'space-between', marginTop: 8 }}>
                 <button className="btn" type="button" onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}>
-                  {mode === 'signin' ? 'Criar conta' : 'Já tenho conta'}
+                  {mode === 'forgot' ? 'Voltar ao login' : mode === 'signin' ? 'Criar conta' : 'Já tenho conta'}
                 </button>
                 <button className="btn btnPrimary" type="submit" disabled={busy}>
-                  {busy ? 'Aguarde…' : mode === 'signin' ? 'Entrar' : 'Cadastrar'}
+                  {busy ? 'Aguarde…' : mode === 'forgot' ? 'Enviar link' : mode === 'signin' ? 'Entrar' : 'Cadastrar'}
                 </button>
               </div>
             </form>
