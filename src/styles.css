@@ -52,9 +52,9 @@
 
 * { box-sizing: border-box; }
 
-/* Modern Chat Layout - Block body scroll */
+/* Modern Chat Layout - Lock scroll ONLY for chat page, not global */
 html, body {
-  overflow: hidden !important;
+  /* REMOVED overflow: hidden !important - was blocking scroll everywhere */
   height: 100%;
   width: 100%;
   margin: 0;
@@ -64,7 +64,7 @@ html, body {
 }
 
 #root {
-  overflow: hidden;
+  /* REMOVED overflow: hidden - was also blocking scroll */
   height: 100%;
   width: 100%;
 }
@@ -89,10 +89,13 @@ a { color: inherit; text-decoration: none; }
 
 .main {
   padding: 22px;
+  overflow-y: auto;
+  min-height: 100vh; /* Min height instead of fixed */
 }
 
+/* Main content - ONLY for chat page which needs fixed height */
 .main-content {
-  height: 100vh;
+  height: calc(100vh - 76px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -176,6 +179,28 @@ option {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 14px;
+}
+
+/* Mobile: 2 columns on tablets */
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+
+/* Mobile: 1 column on small phones */
+@media (max-width: 480px) {
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  
+  .coverWrap {
+    margin: 0 auto;
+    width: 140px !important;
+    height: 200px !important;
+  }
 }
 
 .bookCard {
@@ -304,16 +329,8 @@ option {
   margin-bottom: 14px;
 }
 
-@media (max-width: 980px) {
-  .container {
-    grid-template-columns: 1fr;
-  }
-  .sidebar {
-    position: relative;
-    height: auto;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
+/* Tablets ONLY - Between 769px and 980px */
+@media (min-width: 769px) and (max-width: 980px) {
   .toolbar {
     grid-template-columns: 1fr 1fr;
   }
@@ -326,14 +343,47 @@ option {
   .coverWrap { margin: 0 auto; }
 }
 
-/* Smaller mobile devices */
+/* Mobile devices - 768px and below */
 @media (max-width: 768px) {
-  .main {
-    padding: 16px;
+  /* Container: Single column layout for mobile */
+  .container {
+    grid-template-columns: 1fr !important; /* Override desktop 320px 1fr */
   }
   
-  .sidebar {
+  .main {
     padding: 16px;
+    padding-top: 76px; /* Space for fixed mobile header */
+    min-height: 100vh;
+    overflow-y: visible; /* Let body handle scroll */
+    height: auto;
+  }
+  
+  /* Show mobile header on mobile */
+  .mobile-header {
+    display: flex !important;
+  }
+  
+  /* Mobile overlay is controlled by React state, NOT by CSS */
+  /* REMOVED: .mobile-overlay { display: block !important; } - this was blocking everything */
+  
+  /* Sidebar: hidden by default on mobile, slides in from left */
+  .sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    height: 100vh !important;
+    width: 280px;
+    padding: 76px 16px 16px; /* Top padding for mobile header */
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    border-right: 1px solid var(--border);
+    border-bottom: none;
+    z-index: 999;
+  }
+  
+  /* Sidebar visible when mobile menu open */
+  .sidebar[data-mobile-open="true"] {
+    transform: translateX(0);
   }
   
   .grid {
@@ -369,6 +419,60 @@ option {
   
   .bookCard {
     padding: 8px;
+  }
+  
+  /* Landing Page Mobile Fixes */
+  .landing-header {
+    padding: 12px 16px !important;
+    flex-wrap: nowrap !important; /* KEEP everything on same line */
+    gap: 8px !important;
+  }
+  
+  .landing-logo {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  
+  .landing-title {
+    font-size: 14px !important;
+  }
+  
+  .landing-buttons {
+    gap: 6px !important;
+    flex-shrink: 0;
+  }
+  
+  .landing-buttons button {
+    font-size: 11px !important;
+    padding: 6px 10px !important;
+    white-space: nowrap;
+  }
+  
+  /* Reduce hero title size to fit more words per line */
+  .landing-header ~ div h1 {
+    font-size: 2.5rem !important; /* Smaller title on mobile */
+    line-height: 1.1 !important;
+  }
+  
+  /* Subtitle also smaller */
+  .landing-header ~ div p {
+    font-size: 1rem !important;
+  }
+}
+
+/* AI Agents Home - Mobile Quick Actions */
+@media (max-width: 768px) {
+  /* Adjust quick action cards grid to 2 columns on tablets/mobile */
+  .quick-actions-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Keep quick actions 2 columns even on very small screens */
+  .quick-actions-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
   }
 }
 

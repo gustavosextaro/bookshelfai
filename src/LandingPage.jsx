@@ -56,7 +56,7 @@ export default function LandingPage({ onLogin, onSignup }) {
       }} />
       
       {/* Top Header - Logo, Login & CTA */}
-      <div style={{
+      <div className="landing-header" style={{
         position: 'absolute',
         top: 0,
         left: 0,
@@ -78,6 +78,7 @@ export default function LandingPage({ onLogin, onSignup }) {
           <img 
             src="/bookshelf-icon.png" 
             alt="BookshelfAI" 
+            className="landing-logo"
             style={{
               width: '120px',
               height: '120px',
@@ -85,7 +86,7 @@ export default function LandingPage({ onLogin, onSignup }) {
             }}
           />
           
-          <span style={{
+          <span className="landing-title" style={{
             fontSize: '20px',
             fontWeight: 700,
             color: '#E0F2FE',
@@ -97,7 +98,7 @@ export default function LandingPage({ onLogin, onSignup }) {
         </div>
 
         {/* Buttons - Right Side */}
-        <div style={{
+        <div className="landing-buttons" style={{
           display: 'flex',
           gap: '16px',
           alignItems: 'center'

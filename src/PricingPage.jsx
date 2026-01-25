@@ -205,8 +205,6 @@ export default function PricingPage() {
           gap: '14px',
           maxWidth: '1100px',
           margin: '0 auto',
-          transform: isDesktop ? 'scale(0.98)' : 'scale(1)',
-          transformOrigin: 'top center',
         }}
       >
         {plans.map((plan, index) => (
@@ -232,9 +230,9 @@ export default function PricingPage() {
               background: 'var(--panel)',
               display: 'flex',
               flexDirection: 'column',
-              marginTop: plan.isPopular ? 0 : 15,
-              minHeight: '480px',
-              maxHeight: '540px',
+              marginTop: plan.isPopular && isDesktop ? 0 : 15,
+              minHeight: isDesktop ? '480px' : 'auto',
+              maxHeight: isDesktop ? '540px' : 'none',
             }}
           >
             {plan.isPopular && (

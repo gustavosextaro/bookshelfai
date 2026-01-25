@@ -537,6 +537,46 @@ Não inclua markdown, formatação ou texto adicional. Apenas o JSON.`
   }
 })
 
+// SECURITY: Check if user is admin (email in environment variable)
+app.post('/api/check-admin', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader) {
+      return res.json({ isAdmin: false })
+    }
+
+    const ADMIN_EMAIL = process.env.ADMIN_EMAIL
+    if (!ADMIN_EMAIL) {
+      console.error('❌ ADMIN_EMAIL not set in environment')
+      return res.status(500).json({ error: 'Server configuration error' })
+    }
+
+    const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: {
+        headers: {
+          Authorization: authHeader
+        }
+      }
+    })
+
+    const { data: { user }, error } = await supabase.auth.getUser()
+    
+    if (error || !user) {
+      return res.json({ isAdmin: false })
+    }
+
+    const isAdmin = user.email === ADMIN_EMAIL
+    console.log(`🔐 Admin check: ${user.email} → ${isAdmin}`)
+
+    return res.json({ isAdmin })
+
+  } catch (error) {
+    console.error('❌ Error checking admin status:', error)
+    return res.json({ isAdmin: false })
+  }
+})
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
@@ -547,5 +587,6 @@ app.listen(PORT, () => {
   console.log(`📍 Endpoints:`)
   console.log(`   - POST /.netlify/functions/generate-content`)
   console.log(`   - POST /.netlify/functions/generate-editorial-line`)
+  console.log(`   - POST /api/check-admin`)
   console.log(`   - GET  /health`)
 })

@@ -8,7 +8,7 @@ import SettingsPage from './SettingsPage'
 import PricingPage from './PricingPage'
 import LandingPage from './LandingPage'
 import CreditIndicator from './components/CreditIndicator'
-import { Bot, Library, Settings, User as UserIcon, LogOut, BookOpen, Mail, CreditCard } from 'lucide-react'
+import { Bot, Library, Settings, User as UserIcon, LogOut, BookOpen, Mail, CreditCard, Menu, X } from 'lucide-react'
 
 function Auth({ onAuthed }) {
   const [mode, setMode] = useState('signin')
@@ -48,16 +48,19 @@ function Auth({ onAuthed }) {
         setSuccessMsg(`Enviamos um link de redefinição de senha para ${email}. Verifique sua caixa de entrada!`)
         setPassword('')
       } else if (mode === 'signup') {
+        const finalUsername = username || email.split('@')[0]
         const { error: err } = await supabase.auth.signUp({ 
           email, 
           password,
           options: {
             data: {
-              username: username || email.split('@')[0]
+              username: finalUsername
             }
           }
         })
         if (err) throw err
+        // Salvar no localStorage como fallback para quando o perfil for carregado
+        localStorage.setItem('bookshelfai.pendingUsername', finalUsername)
         setSuccessMsg(`Cadastro realizado! Verifique o e-mail enviado para ${email} para confirmar sua conta.`)
         setPassword('')
       } else {
@@ -259,12 +262,24 @@ export default function App() {
   const [session, setSession] = useState(null)
   const [userProfile, setUserProfile] = useState(null)
   const [currentPage, setCurrentPage] = useState('ai-agents') // 'ai-agents', 'library', 'profile', 'settings'
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false)
   const [showAuth, setShowAuth] = useState(false) // To control landing vs auth screen
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
     return () => subscription.unsubscribe()
+  }, [])
+
+  // Listen for navigation events from child components
+  useEffect(() => {
+    function handleNavigate(e) {
+      if (e.detail) {
+        setCurrentPage(e.detail)
+      }
+    }
+    window.addEventListener('navigate', handleNavigate)
+    return () => window.removeEventListener('navigate', handleNavigate)
   }, [])
 
   // Load profile when session exists
@@ -285,8 +300,15 @@ export default function App() {
       setUserProfile(profile)
       // Cache for faster next load
       localStorage.setItem('bookshelfai.cachedProfile', JSON.stringify(profile))
+      localStorage.removeItem('bookshelfai.pendingUsername')
       return
     }
+
+    // Check for pending username from signup
+    const pendingUsername = localStorage.getItem('bookshelfai.pendingUsername')
+    
+    // Get username from auth metadata (set during signup)
+    const metadataUsername = user.user_metadata?.username
 
     // Cache-first: show cached data immediately to avoid delay
     const cachedProfile = localStorage.getItem('bookshelfai.cachedProfile')
@@ -300,14 +322,35 @@ export default function App() {
     }
 
     // Then fetch fresh data from DB
-    const { data } = await supabase.from('profiles').select('username').eq('id', user.id).single()
-    const username = data?.username || 
-                     localStorage.getItem('bookshelfai.username') || 
-                     user.email.split('@')[0]
-    const profile = { id: user.id, username, email: user.email }
+    const { data, error } = await supabase.from('profiles').select('username').eq('id', user.id).single()
+    
+    // Check localStorage for user-set username (set via ProfilePage or signup)
+    const localStorageUsername = localStorage.getItem('bookshelfai.username')
+    
+    // Determine the best username to use
+    // Priority: pendingUsername (just signed up) > localStorage (user set it) > metadata > db > email
+    const bestUsername = pendingUsername || localStorageUsername || metadataUsername || data?.username || 
+                         user.email.split('@')[0]
+    
+    // If there's a better username than what's in the DB, update the DB
+    const dbNeedsUpdate = data?.username && bestUsername !== data.username
+    if (!error && data) {
+      // Profile exists - sync if username in DB differs from best username
+      if (dbNeedsUpdate || data.username?.startsWith('user_') || !data.username) {
+        await supabase.from('profiles').update({ username: bestUsername }).eq('id', user.id)
+      }
+    } else if (error?.code === 'PGRST116') {
+      // Profile doesn't exist - create it (trigger may have failed)
+      await supabase.from('profiles').insert({ id: user.id, username: bestUsername })
+    }
+    
+    const profile = { id: user.id, username: bestUsername, email: user.email }
     setUserProfile(profile)
-    // Update cache
+    
+    // Update caches and clear pending
     localStorage.setItem('bookshelfai.cachedProfile', JSON.stringify(profile))
+    localStorage.setItem('bookshelfai.username', bestUsername)
+    localStorage.removeItem('bookshelfai.pendingUsername')
   }
 
   async function handleSignOut() {
@@ -338,9 +381,70 @@ export default function App() {
   return (
     <>
       <InfiniteGridBackground />
+      
+      {/* Mobile Header with Hamburger */}
+      <div style={{
+        display: 'none',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '60px',
+        background: 'rgba(17, 24, 39, 0.95)',
+        backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+        padding: '0 1rem',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        zIndex: 100,
+        '@media (max-width: 768px)': { display: 'flex' }
+      }} className="mobile-header">
+        <button
+          onClick={() => setShowMobileSidebar(!showMobileSidebar)}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: 'white',
+            cursor: 'pointer',
+            padding: '8px'
+          }}
+        >
+          {showMobileSidebar ? <X size={24} /> : <Menu size={24} />}
+        </button>
+        <div style={{ 
+          fontSize: '18px', 
+          fontWeight: '700',
+          background: 'linear-gradient(135deg, var(--brand), var(--brand-2))',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent'
+        }}>
+          BookshelfAI
+        </div>
+        <div style={{ width: '40px' }} /> {/* Spacer */}
+      </div>
+
+      {/* Mobile Overlay */}
+      {showMobileSidebar && (
+        <div
+          onClick={() => setShowMobileSidebar(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            zIndex: 900, /* BELOW sidebar (999) so it doesn't block clicks */
+            display: 'none'
+          }}
+          className="mobile-overlay"
+        />
+      )}
+
       <div className="container">
         {/* Sidebar */}
-        <aside className="sidebar" style={{ display: 'flex', flexDirection: 'column' }}>
+        <aside className="sidebar" style={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          zIndex: 999
+        }} data-mobile-open={showMobileSidebar}>
           <div style={{ marginBottom: '30px', paddingLeft: '8px' }}>
             <div style={{ 
               fontSize: '20px', 

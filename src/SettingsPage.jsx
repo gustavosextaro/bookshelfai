@@ -24,14 +24,26 @@ export default function SettingsPage() {
 
   async function checkAdminStatus() {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user, session } } = await supabase.auth.getUser()
       if (user) {
         setUser(user)
-        const admin = user.email === 'gustavosextaro@gmail.com'
-        setIsAdmin(admin)
-        if (admin) {
-          loadAllUsers()
-          checkApiHealth()
+        
+        // VERIFICAÇÃO SEGURA: Chama backend para verificar admin
+        const response = await fetch('/api/check-admin', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session?.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        if (response.ok) {
+          const { isAdmin } = await response.json()
+          setIsAdmin(isAdmin)
+          if (isAdmin) {
+            loadAllUsers()
+            checkApiHealth()
+          }
         }
       }
     } catch (err) {

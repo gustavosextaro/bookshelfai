@@ -255,9 +255,20 @@ export default function LibraryPage() {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [selectedSuggestion, setSelectedSuggestion] = useState(null)
   const [searchTimeout, setSearchTimeout] = useState(null)
+  
+  // Mobile detection state
+  const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
     loadBooks()
+  }, [])
+  
+  // Detect mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
   // Close suggestions when clicking outside
@@ -531,7 +542,7 @@ export default function LibraryPage() {
 
       {/* Add Book Form */}
       <div className="card" style={{ padding: '20px', marginBottom: '30px' }}>
-        <form onSubmit={handleAddBook} className="mobile-form" style={{ display: 'grid', gridTemplateColumns: '1fr 180px auto', gap: '12px', alignItems: 'end' }}>
+        <form onSubmit={handleAddBook} style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 180px auto', gap: '12px', alignItems: 'end' }}>
           <div style={{ position: 'relative' }}>
             <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>Novo Livro</label>
             <input 

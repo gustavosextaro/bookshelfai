@@ -18,162 +18,111 @@ export default function ProfilePage({ onProfileUpdate }) {
   const [favoriteBooks, setFavoriteBooks] = useState([])
   const [showFavoriteSelector, setShowFavoriteSelector] = useState(false)
   const [availableBooks, setAvailableBooks] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Estado para responsividade
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
+    handleResize() // Check on mount
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   useEffect(() => {
     loadProfileData()
   }, [])
 
   async function loadProfileData() {
-    console.log('🔍 [ProfilePage] Starting loadProfileData...')
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    
-    if (userError) {
-      console.error('❌ [ProfilePage] Error getting user:', userError)
-      return
-    }
-    
-    if (!user) {
-      console.warn('⚠️ [ProfilePage] No user found')
-      return
-    }
-    
-    console.log('✅ [ProfilePage] User ID:', user.id)
-
-    // Priority 1: Check localStorage first
-    const savedUsername = localStorage.getItem('bookshelfai.username')
-    console.log('📦 [ProfilePage] localStorage username:', savedUsername)
-    
-    // Profile & Settings
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError) {
-      console.error('❌ [ProfilePage] Profile fetch error:', profileError)
-    } else {
-      console.log('✅ [ProfilePage] Profile data:', profileData)
-    }
-
-    // Use localStorage if available, otherwise fallback to database
-    const displayUsername = savedUsername || profileData?.username || 'Usuário'
-    setProfile({ ...(profileData || {}), username: displayUsername })
-    setUsername(displayUsername)
-    
-    // Load favorites from localStorage
-    const savedFavorites = localStorage.getItem(`bookshelfai.favorites.${user.id}`)
-    if (savedFavorites) {
-      try {
-        const favorites = JSON.parse(savedFavorites)
-        setFavoriteBooks(favorites)
-        console.log('⭐ [ProfilePage] Loaded favorites from localStorage:', favorites)
-      } catch (e) {
-        console.error('Error parsing favorites:', e)
+    setIsLoading(true)
+    try {
+      // 1. Pega o usuário (Bloqueante, pois precisamos do ID)
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      
+      if (userError || !user) {
+        console.error('❌ Erro/Sem usuário')
+        return
       }
-    }
 
-    // Check reset date
-    const lastReset = profileData?.settings?.last_reset_at ? new Date(profileData.settings.last_reset_at) : null
-    console.log('🔄 [ProfilePage] Last reset:', lastReset)
-
-    // Books count (Books are never reset, only AI stats)
-    console.log('📚 [ProfilePage] Fetching books for user:', user.id)
-    const { data: books, error: booksError } = await supabase
-      .from('books')
-      .select('id, title, authors, cover_url, read_date')
-      .eq('user_id', user.id)
+      // Carregar localStorage (Sincrono)
+      const savedUsername = localStorage.getItem('bookshelfai.username')
+      const savedFavorites = localStorage.getItem(`bookshelfai.favorites.${user.id}`)
       
-    if (booksError) {
-      console.error('❌ [ProfilePage] Books fetch error:', booksError)
-      console.error('❌ [ProfilePage] Books error details:', JSON.stringify(booksError, null, 2))
-    } else {
-      console.log('✅ [ProfilePage] Books fetched:', books?.length || 0, 'books')
-      console.log('📖 [ProfilePage] Books data:', books)
-    }
+      if (savedFavorites) {
+        try { setFavoriteBooks(JSON.parse(savedFavorites)) } catch (e) {}
+      }
+
+      // 2. DISPARAR TUDO EM PARALELO (Promise.all)
+      const [profileResponse, booksResponse, outputsResponse, brainResponse] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', user.id).single(),
+        supabase.from('books').select('id, title, authors, cover_url, read_date').eq('user_id', user.id),
+        supabase.from('ai_outputs').select('type, created_at, book_id, books(title)').eq('user_id', user.id),
+        supabase.from('user_brain').select('editorial_pillars').eq('user_id', user.id).single()
+      ])
+
+      // --- Processamento do Perfil ---
+      const profileData = profileResponse.data
+      const displayUsername = savedUsername || profileData?.username || 'Usuário'
+      setProfile({ ...(profileData || {}), username: displayUsername })
+      setUsername(displayUsername)
+
+      // --- Processamento dos Livros ---
+      const books = booksResponse.data || []
+      setAvailableBooks(books)
+
+      // --- Processamento das Estatísticas ---
+      const allOutputs = outputsResponse.data || []
+      const lastReset = profileData?.settings?.last_reset_at ? new Date(profileData.settings.last_reset_at) : null
       
-    setAvailableBooks(books || [])
+      // Filtros de data
+      const now = new Date()
+      const currentYear = now.getFullYear()
+      const currentMonth = now.getMonth()
 
-    const now = new Date()
-//...
-    const currentYear = now.getFullYear()
-    const currentMonth = now.getMonth()
+      const thisYear = books.filter(b => {
+        const d = new Date(b.read_date)
+        return d.getFullYear() === currentYear
+      }).length
 
-    const thisYear = books?.filter(b => {
-      const d = new Date(b.read_date)
-      return d.getFullYear() === currentYear
-    }).length || 0
+      const thisMonth = books.filter(b => {
+        const d = new Date(b.read_date)
+        return d.getFullYear() === currentYear && d.getMonth() === currentMonth
+      }).length
 
-    const thisMonth = books?.filter(b => {
-      const d = new Date(b.read_date)
-      return d.getFullYear() === currentYear && d.getMonth() === currentMonth
-    }).length || 0
+      const validOutputs = allOutputs.filter(o => !lastReset || new Date(o.created_at) > lastReset)
+      const scripts = validOutputs.filter(o => o.type === 'script').length
+      const summaries = validOutputs.filter(o => o.type === 'summary').length
 
-    // AI outputs
-    console.log('🤖 [ProfilePage] Fetching AI outputs...')
-    const { data: allOutputs, error: outputsError } = await supabase
-      .from('ai_outputs')
-      .select('type, created_at, book_id, books(title)')
-      .eq('user_id', user.id)
+      setStats({
+        totalBooks: books.length + DEFAULT_BOOKS_COUNT,
+        thisYear,
+        thisMonth,
+        scripts,
+        summaries
+      })
 
-    if (outputsError) {
-      console.error('❌ [ProfilePage] AI outputs fetch error:', outputsError)
-    } else {
-      console.log('✅ [ProfilePage] AI outputs fetched:', allOutputs?.length || 0)
+      // --- Roteiros por Livro ---
+      const scriptOutputs = validOutputs.filter(o => o.type === 'script' && o.book_id)
+      const bookCounts = {}
+      scriptOutputs.forEach(item => {
+        const title = item.books?.title || 'Livro desconhecido'
+        bookCounts[title] = (bookCounts[title] || 0) + 1
+      })
+      setScriptsByBook(
+        Object.entries(bookCounts)
+          .map(([title, count]) => ({ title, count }))
+          .sort((a, b) => b.count - a.count)
+      )
+
+      // --- Linha Editorial ---
+      setEditorialLine(brainResponse.data?.editorial_pillars || null)
+
+    } catch (error) {
+      console.error('Erro geral ao carregar perfil:', error)
+    } finally {
+      setIsLoading(false)
     }
-
-    // Filter outputs based on reset date
-    const outputs = allOutputs?.filter(o => 
-      !lastReset || new Date(o.created_at) > lastReset
-    ) || []
-
-    const scripts = outputs.filter(o => o.type === 'script').length || 0
-    const summaries = outputs.filter(o => o.type === 'summary').length || 0
-    
-    console.log('📊 [ProfilePage] Final stats:', {
-      totalBooks: (books?.length || 0) + DEFAULT_BOOKS_COUNT,
-      thisYear,
-      thisMonth,
-      scripts,
-      summaries
-    })
-
-    setStats({
-      totalBooks: (books?.length || 0) + DEFAULT_BOOKS_COUNT,
-      thisYear,
-      thisMonth,
-      scripts,
-      summaries
-    })
-
-    // Scripts by book (filtered)
-    const scriptOutputs = outputs.filter(o => o.type === 'script' && o.book_id)
-    const bookCounts = {}
-    
-    scriptOutputs.forEach(item => {
-      const title = item.books?.title || 'Livro desconhecido'
-      bookCounts[title] = (bookCounts[title] || 0) + 1
-    })
-
-    setScriptsByBook(
-      Object.entries(bookCounts)
-        .map(([title, count]) => ({ title, count }))
-        .sort((a, b) => b.count - a.count)
-    )
-
-    // Editorial line
-    const { data: brain, error: brainError } = await supabase
-      .from('user_brain')
-      .select('editorial_pillars')
-      .eq('user_id', user.id)
-      .single()
-
-    if (brainError && brainError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-      console.error('❌ [ProfilePage] Brain fetch error:', brainError)
-    }
-
-    setEditorialLine(brain?.editorial_pillars || null)
-    console.log('✅ [ProfilePage] loadProfileData completed!')
   }
 
   async function handleResetStats() {
@@ -360,8 +309,14 @@ Formato de resposta (JSON):
         <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><User size={24} /> Meu Perfil</span>
       </div>
 
+      {isLoading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '50px' }}>
+          <span className="muted">Carregando perfil...</span>
+        </div>
+      ) : (
+        <>
       {/* Profile Header */}
-      <div className="card" style={{ padding: '24px', marginBottom: '24px' }}>
+      <div className="card" style={{ padding: '24px', marginBottom: '24px', minHeight: '120px' }}>
         {editing ? (
           <div>
             <div style={{ fontWeight: '700', marginBottom: '16px' }}>Editar Perfil</div>
@@ -416,7 +371,13 @@ Formato de resposta (JSON):
       {/* Favorite Books Section */}
       <div style={{ marginBottom: '30px' }}>
         <div style={{ fontWeight: '700', fontSize: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}><Star size={16} /> Livros Favoritos</div>
-        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', 
+          gap: '16px',
+          justifyItems: 'center',
+          minHeight: '140px'
+        }}>
           {[0, 1, 2, 3].map(index => {
             const bookId = favoriteBooks[index]
             const book = availableBooks.find(b => b.id === bookId)
@@ -476,7 +437,7 @@ Formato de resposta (JSON):
       <div style={{ marginBottom: '24px' }}>
         <div style={{ fontWeight: '700', fontSize: '16px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}><BarChart3 size={16} /> Estatísticas de IA</div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '14px' }}>
           <div className="card" style={{ padding: '16px', textAlign: 'center' }}>
             <div className="muted" style={{ fontSize: '11px', marginBottom: '6px' }}>Livros na Biblioteca</div>
             <div style={{ fontSize: '24px', fontWeight: '700', color: '#667eea' }}>{stats.totalBooks || 0}</div>
@@ -725,6 +686,8 @@ Formato de resposta (JSON):
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   )

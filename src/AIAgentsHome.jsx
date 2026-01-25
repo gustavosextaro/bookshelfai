@@ -66,7 +66,8 @@ const ChatInputSection = ({
   activeContext,
   setActiveContext,
   showContextSelector,
-  setShowContextSelector
+  setShowContextSelector,
+  userTier
 }) => (
   <div style={styles.chatInputWrapper}>
     {/* Context indicator badge */}
@@ -139,7 +140,17 @@ const ChatInputSection = ({
           boxShadow: '0 10px 40px rgba(0, 0, 0, 0.4)'
         }}>
           <button
-            onClick={() => { setActiveContext('produtor'); setShowContextSelector(false); setSelectedBookIds([]); }}
+            onClick={() => {
+              if (userTier === 'free') {
+                // Redirect to pricing page
+                window.location.hash = 'planos';
+                setShowContextSelector(false);
+                return;
+              }
+              setActiveContext('produtor');
+              setShowContextSelector(false);
+              setSelectedBookIds([]);
+            }}
             style={{
               width: '100%',
               display: 'flex',
@@ -148,17 +159,38 @@ const ChatInputSection = ({
               padding: '0.75rem',
               border: 'none',
               background: activeContext === 'produtor' ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-              color: activeContext === 'produtor' ? '#818cf8' : '#e2e8f0',
+              color: userTier === 'free' ? '#a1a1aa' : (activeContext === 'produtor' ? '#818cf8' : '#e2e8f0'),
               borderRadius: '0.5rem',
               cursor: 'pointer',
               textAlign: 'left',
-              fontSize: '0.875rem'
+              fontSize: '0.875rem',
+              position: 'relative'
             }}
           >
-            <Bot size={18} />
+            {userTier === 'free' && (
+              <div style={{
+                position: 'absolute',
+                top: '0.5rem',
+                right: '0.5rem',
+                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                color: 'white',
+                fontSize: '0.6rem',
+                fontWeight: 700,
+                padding: '2px 6px',
+                borderRadius: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px'
+              }}>
+                <Crown size={10} /> PRO
+              </div>
+            )}
+            {userTier === 'free' ? <Lock size={18} /> : <Bot size={18} />}
             <div>
               <div style={{ fontWeight: 600 }}>Produtor de Conteúdo</div>
-              <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>Entrevista + perfil pessoal</div>
+              <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>
+                {userTier === 'free' ? 'Disponível em planos pagos' : 'Entrevista + perfil pessoal'}
+              </div>
             </div>
           </button>
           <button
@@ -300,6 +332,10 @@ export default function AIAgentsHome() {
   const [userTier, setUserTier] = useState('free')
   const [messageCount, setMessageCount] = useState(0)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [isMobile, setIsMobile] = useState(false) // Mobile detection state
+  
+  const textareaRef = useRef(null)
+  const recognitionRef = useRef(null)
   // Basic Markdown Renderer
   const renderMarkdown = (text) => {
     if (!text) return ''
@@ -318,10 +354,7 @@ export default function AIAgentsHome() {
   }
 
   const [isRecording, setIsRecording] = useState(false)
-  const textareaRef = useRef(null)
   const messagesEndRef = useRef(null)
-  const recognitionRef = useRef(null)
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   
   // Moved after state initialization to prevent ReferenceError
   const isHeroMode = conversationHistory.length === 0 && !loading && !output
@@ -370,6 +403,14 @@ export default function AIAgentsHome() {
 
   useEffect(() => {
     loadUserData()
+  }, [])
+
+  // Detect mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
   // Auto-resize textarea
@@ -1015,13 +1056,14 @@ export default function AIAgentsHome() {
       description: 'Viralize conteúdo de livros',
       prompt: 'Crie um roteiro viral para TikTok/Reels baseado nos livros da minha biblioteca',
       color: '#6366f1',
-      bgColor: 'rgba(99, 102, 241, 0.1)'
+      bgColor: 'rgba(99, 102, 241, 0.1)',
+      isPro: true
     },
     {
       icon: 'Lightbulb',
       label: 'Gerar Ideias',
-      description: '10 conceitos de vídeo',
-      prompt: 'Me dê 5 ideias criativas de conteúdo não-genéricas',
+      description: '1 conceito de vídeo',
+      prompt: 'Me dê 1 ideia criativa de conteúdo não-genérica baseada nos livros da minha biblioteca',
       color: '#f59e0b',
       bgColor: 'rgba(245, 158, 11, 0.1)'
     },
@@ -1031,7 +1073,8 @@ export default function AIAgentsHome() {
       description: 'Capítulos essenciais',
       prompt: 'Faça um resumo em tópicos dos principais insights',
       color: '#10b981',
-      bgColor: 'rgba(16, 185, 129, 0.1)'
+      bgColor: 'rgba(16, 185, 129, 0.1)',
+      requiresBooks: true
     },
     {
       icon: 'FlipVertical',
@@ -1064,7 +1107,8 @@ export default function AIAgentsHome() {
     activeContext,
     setActiveContext,
     showContextSelector,
-    setShowContextSelector
+    setShowContextSelector,
+    userTier
   }
 
 
@@ -1101,21 +1145,21 @@ export default function AIAgentsHome() {
                 </div>
               </div>
 
-              {/* Context Selection Cards - Clear Mode Choice */}
+              {/* Context Selection Cards - Hidden on Mobile in Hero Mode */}
+              {!isMobile && (
               <div style={{
                 display: 'flex',
                 gap: '1rem',
                 width: '100%',
                 maxWidth: '800px',
                 marginBottom: '1.5rem',
-                flexDirection: isMobile ? 'column' : 'row'
+                flexDirection: 'row'
               }}>
                 {/* Produtor de Conteúdo Card */}
                 <button
                   onClick={() => {
                     if (userTier === 'free') {
                       // Redirect to pricing page
-                      window.location.hash = '#planos'
                       window.dispatchEvent(new CustomEvent('navigate', { detail: 'planos' }))
                     } else {
                       setActiveContext('produtor')
@@ -1257,6 +1301,7 @@ export default function AIAgentsHome() {
                   </p>
                 </button>
               </div>
+              )}
               
               {/* Centralized Input Area */}
               <div style={{ width: '100%', marginTop: '0.5rem', marginBottom: '1.5rem' }}>
@@ -1268,10 +1313,47 @@ export default function AIAgentsHome() {
                 {quickActions.map((action, i) => (
                   <button
                     key={i}
-                    style={styles.actionCard}
-                    onClick={() => handleGenerate(action.prompt)}
+                    style={{
+                      ...styles.actionCard,
+                      opacity: (action.requiresBooks && brainStats.booksCount === 0) ? 0.5 : 1,
+                      cursor: (action.requiresBooks && brainStats.booksCount === 0) ? 'not-allowed' : 'pointer',
+                      position: 'relative'
+                    }}
+                    onClick={() => {
+                      // Check if action requires PRO tier
+                      if (action.isPro && userTier === 'free') {
+                        window.dispatchEvent(new CustomEvent('navigate', { detail: 'planos' }));
+                        return;
+                      }
+                      // Check if action requires books
+                      if (action.requiresBooks && brainStats.booksCount === 0) {
+                        alert('Adicione livros à sua biblioteca primeiro!');
+                        return;
+                      }
+                      handleGenerate(action.prompt);
+                    }}
                     disabled={loading}
                   >
+                    {/* PRO Badge */}
+                    {action.isPro && userTier === 'free' && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '4px',
+                        right: '4px',
+                        background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                        color: 'white',
+                        fontSize: '0.55rem',
+                        fontWeight: 700,
+                        padding: '2px 5px',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '2px',
+                        zIndex: 1
+                      }}>
+                        <Crown size={9} /> PRO
+                      </div>
+                    )}
                     <div style={styles.actionIcon}>
                       {action.icon === 'Video' ? <Video size={24} /> :
                        action.icon === 'Lightbulb' ? <Lightbulb size={24} /> :
